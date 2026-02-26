@@ -12,3 +12,8 @@ class cheque(models.Model):
     status = models.TextField()
     description = models.TextField()
 
+class Alerts(models.Model):
+    date = models.DateField()
+    alerts = models.TextField()
+    
+

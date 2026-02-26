@@ -62,11 +62,14 @@ class chequeSerializer(serializers.ModelSerializer):
 # USER SERIALIZER
 # ==========================================
 class UserSerializer(serializers.ModelSerializer):
+    # Password should be write-only for security
+    password = serializers.CharField(write_only=True, required=True)
+
     class Meta:
         model = User
-        fields = '__all__'
+        fields = ['id', 'username', 'email', 'password', 'mobilenumber', 'bank_name']
 
-    # --- FIELD LEVEL (Specific Columns) ---
+    # --- Field-Level Validations ---
 
     def validate_username(self, value):
         if len(value) < 3:
@@ -74,47 +77,32 @@ class UserSerializer(serializers.ModelSerializer):
         return value
 
     def validate_bank_name(self, value):
-        # Added null-safety check to prevent 'NoneType' has no attribute 'upper' error
-        if not value:
-            return value
-            
-        valid_banks = ['SBI', 'HDFC', 'ICICI', 'AXIS']
-        clean_value = value.strip().upper()
-        
-        if clean_value not in valid_banks:
-            raise serializers.ValidationError("Only authorized banks (SBI, HDFC, ICICI, AXIS) are allowed.")
-        return clean_value
+        allowed_banks = ['SBI', 'HDFC', 'ICICI', 'AXIS']
+        # Converting to uppercase to ensure case-insensitive matching if needed
+        if value and value.upper() not in allowed_banks:
+            raise serializers.ValidationError(f"Bank name must be one of: {', '.join(allowed_banks)}")
+        return value
 
-    # --- OBJECT LEVEL (Cross-Column or State Logic) ---
+    # --- Object-Level Validations ---
 
     def validate(self, data):
-        """
-        Object-level validation for User
-        """
-        # 1. Superuser/Staff Logic
-        # We use .get() with a fallback to self.instance to handle PATCH requests correctly
-        is_superuser = data.get('is_superuser', self.instance.is_superuser if self.instance else False)
-        is_staff = data.get('is_staff', self.instance.is_staff if self.instance else False)
-
-        if is_superuser and not is_staff:
-            raise serializers.ValidationError({
-                "is_staff": "Superusers must also have staff status."
-            })
-
-        # 2. Staff Email Requirement (Testing Testcase 4)
-        email = data.get('email', self.instance.email if self.instance else "")
-        if is_staff and not email:
-            raise serializers.ValidationError({
-                "email": "Staff members must have a registered email address."
-            })
-
-        # 3. Protecting 'date_joined' from being changed during update
-        if self.instance and 'date_joined' in data:
-            # Convert both to string or date objects to compare accurately
-            new_date = data['date_joined']
-            if new_date != self.instance.date_joined:
-                raise serializers.ValidationError({
-                    "date_joined": "The joining date cannot be altered after creation."
-                })
-
+        # Example logic: Ensure staff members have an email
+        if data.get('is_staff') and not data.get('email'):
+            raise serializers.ValidationError({"email": "Staff members must have a registered email address."})
         return data
+
+    # --- Overriding Create ---
+
+    def create(self, validated_data):
+        """
+        Overrides the default create method to use create_user.
+        This ensures the password is saved as a secure hash, not plain text.
+        """
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data.get('email', ''),
+            password=validated_data['password'],
+            mobilenumber=validated_data.get('mobile_number'),
+            bank_name=validated_data.get('bank_name')
+        )
+        return user
