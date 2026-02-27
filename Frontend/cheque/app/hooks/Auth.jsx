@@ -13,4 +13,6 @@ export default function Auth() {
       router.replace("/login");
     }
   }, [router]);
+
+  return null;
 }

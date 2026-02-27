@@ -11,6 +11,7 @@ class cheque(models.Model):
     post_date = models.DateField()
     status = models.TextField()
     description = models.TextField()
+    Image = models.ImageField(default="null")
 
 class Alerts(models.Model):
     date = models.DateField()

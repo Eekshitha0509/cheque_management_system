@@ -1,23 +1,15 @@
 "use client";
 
-import { useState, ChangeEvent, FormEvent } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 
-interface RegistrationState {
-  fullName: string;
-  email: string;
-  password: string;
-  mobile_number: string;
-  bank_name: string;
-}
-
 export default function RegisterPage() {
   const router = useRouter();
 
-  const initialState: RegistrationState = {
+  const initialState = {
     fullName: "",
     email: "",
     password: "",
@@ -25,9 +17,9 @@ export default function RegisterPage() {
     bank_name: "",
   };
 
-  const [formData, setFormData] = useState<RegistrationState>(initialState);
+  const [formData, setFormData] = useState(initialState);
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
 
     setFormData((prev) => ({
@@ -36,14 +28,14 @@ export default function RegisterPage() {
     }));
   };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
       const response = await axios.post(
         "http://127.0.0.1:8000/api/v1/user/",
         {
-          username: formData.fullName.replace(/\s+/g, "").toLowerCase(),
+          username: formData.email,
           email: formData.email,
           password: formData.password,
           mobile_number: formData.mobile_number,
@@ -53,7 +45,6 @@ export default function RegisterPage() {
       );
 
       if (response.status === 200 || response.status === 201) {
-        alert("Registration Successful!");
         router.push("/login");
       }
     } catch (error) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, ChangeEvent, FormEvent } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import axios from "axios";
 import { useRouter } from "next/navigation";
@@ -8,12 +8,12 @@ import { useRouter } from "next/navigation";
 export default function LoginPage() {
   const router = useRouter();
 
-  // 1️⃣ State to store input values
+  // State to store input values
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
-  // 2️⃣ Login function
-  const login = async (e: FormEvent<HTMLFormElement>) => {
+  // Login function
+  const login = async (e) => {
     e.preventDefault();
 
     try {
@@ -25,11 +25,10 @@ export default function LoginPage() {
         }
       );
 
-      // 3️⃣ Save token
+      // Save token
       localStorage.setItem("token", response.data.access);
-
-      alert("Login Successful");
-      router.push("/dashboard"); // change if needed
+      console.log("Dashboard")
+      router.push("/dashboard");
     } catch (error) {
       alert("Invalid username or password");
     }
@@ -41,7 +40,7 @@ export default function LoginPage() {
         Streamline your traditional Cheque Management System
       </h1>
 
-      {/* 4️⃣ Form */}
+      {/* Form */}
       <form
         onSubmit={login}
         className="flex flex-col gap-4 w-full max-w-sm"
@@ -51,9 +50,7 @@ export default function LoginPage() {
           type="text"
           placeholder="Username"
           value={username}
-          onChange={(e: ChangeEvent<HTMLInputElement>) =>
-            setUsername(e.target.value)
-          }
+          onChange={(e) => setUsername(e.target.value)}
           className="p-3 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-black"
           required
           autoComplete="name"
@@ -63,9 +60,7 @@ export default function LoginPage() {
           type="password"
           placeholder="Password"
           value={password}
-          onChange={(e: ChangeEvent<HTMLInputElement>) =>
-            setPassword(e.target.value)
-          }
+          onChange={(e) => setPassword(e.target.value)}
           className="p-3 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-black"
           required
           autoComplete="new-password"
