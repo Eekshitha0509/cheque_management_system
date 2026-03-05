@@ -26,8 +26,7 @@ urlpatterns = [
     #web application endpoint
     path('',include('account.urls')),
     path('admin/', admin.site.urls),
-    path('cheque/',include('cheque.urls')),
-
+     path('cheque/', include('cheque.urls')),
     # api endpoint
     path('api/v1/',include('api.urls')),
     path('api/v1/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),

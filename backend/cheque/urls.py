@@ -1,6 +1,6 @@
 from django.urls import path
-from . import views
+from .views import upload_cheque
 
 urlpatterns = [
-    path('cheque/',views.all_cheque,name = 'cheque')
+    path("upload-cheque/", upload_cheque),
 ]

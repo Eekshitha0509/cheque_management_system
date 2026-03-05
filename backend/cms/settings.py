@@ -11,9 +11,14 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 from datetime import timedelta
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.join(
+    BASE_DIR, "service-account.json"
+)
 
 
 # Quick-start development settings - unsuitable for production
@@ -101,11 +106,9 @@ AUTH_USER_MODEL = 'account.User'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': (),
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',
     ),
 }
 
