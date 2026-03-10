@@ -96,8 +96,8 @@ DATABASES = {
 ALLOWED_HOSTS = ['192.168.29.208', '127.0.0.1', 'localhost']
 
 CORS_ALLOWED_ORIGINS = [
-    "http://192.168.29.208:3000",
     "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ]
 
 AUTH_USER_MODEL = 'account.User'
@@ -152,3 +152,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+MEDIA_URL = '/media/'
+import os
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

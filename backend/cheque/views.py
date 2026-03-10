@@ -1,244 +1,190 @@
-import cv2
-import pytesseract
-import numpy as np
-import re
+import base64
 import json
-from datetime import datetime
-from groq import Groq
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
+from datetime import date
+from dateutil import parser
+from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth import get_user_model
+from groq import Groq
+from django.shortcuts import get_list_or_404
 from .models import cheque
-
-# Tesseract path
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-
-# Groq client
-client = Groq(api_key="YOUR_GROQ_API_KEY")
-
-
-# ---------------- OCR UTILITY ----------------
-def ocr_region(region):
-    gray = cv2.cvtColor(region, cv2.COLOR_BGR2GRAY)
-    gray = cv2.GaussianBlur(gray,(3,3),0)
-
-    text = pytesseract.image_to_string(
-        gray,
-        config="--oem 3 --psm 6"
-    )
-
-    return text.strip()
+from django.http import JsonResponse
+from rest_framework.decorators import api_view
+import logging
+import os
+from django.core.files.base import ContentFile
 
 
-# ---------------- CHEQUE NUMBER ----------------
-def detect_cheque_number(image):
-
-    h,w,_ = image.shape
-
-    micr = image[int(h*0.75):h,0:w]
-
-    text = ocr_region(micr)
-
-    nums = re.findall(r"\d+",text)
-
-    for n in nums:
-        if len(n)>=6:
-            return n[:6]
-
-    return None
+logger = logging.getLogger(__name__)
 
 
-# ---------------- DATE ----------------
-def detect_date(image):
+# 1. Initialize Groq and the Custom User Model
+client = Groq(api_key="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")
+User = get_user_model()
 
-    h,w,_ = image.shape
-
-    region = image[int(h*0.05):int(h*0.20),int(w*0.70):w]
-
-    text = ocr_region(region)
-
-    match = re.search(r'\d{2}[/-]\d{2}[/-]\d{4}',text)
-
-    if match:
-        return match.group()
-
-    return None
-
-
-# ---------------- AMOUNT ----------------
-def detect_amount(image):
-
-    h,w,_ = image.shape
-
-    region = image[int(h*0.35):int(h*0.55),int(w*0.60):w]
-
-    text = ocr_region(region)
-
-    match = re.search(r'\d{2,7}',text)
-
-    if match:
-        return match.group()
-
-    return None
-
-
-# ---------------- PAYEE ----------------
-def detect_payee(image):
-
-    h,w,_ = image.shape
-
-    region = image[int(h*0.25):int(h*0.40),int(w*0.10):int(w*0.80)]
-
-    text = ocr_region(region)
-
-    return text
-
-
-# ---------------- BANK ----------------
-def detect_bank(text):
-
-    banks = [
-        "State Bank of India",
-        "HDFC Bank",
-        "ICICI Bank",
-        "Axis Bank",
-        "Punjab National Bank",
-        "Bank of Baroda",
-        "Canara Bank",
-        "Union Bank of India"
-    ]
-
-    for bank in banks:
-        if bank.lower() in text.lower():
-            return bank
-
-    return None
-
-
-# ---------------- GROQ CLEANUP ----------------
-def clean_with_groq(raw_text):
-
-    prompt = f"""
-Clean the following OCR text and extract cheque information.
-
-Return ONLY JSON:
-
-{{
-"bank":"",
-"payee":"",
-"amount":"",
-"date":"",
-"cheque_number":"",
-"account_number":"",
-"ifsc":""
-}}
-
-OCR TEXT:
-{raw_text}
-"""
-
-    response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[{"role":"user","content":prompt}],
-        temperature=0
-    )
-
-    result = response.choices[0].message.content
-
-    try:
-        return json.loads(result)
-    except:
-        return {}
-
-
-# ---------------- MAIN API ----------------
 @csrf_exempt
-@api_view(["POST"])
-def upload_cheque(request):
+def cheque_reader(request):
+    """
+    Receives username, purpose, and cheque_image.
+    Extracts data using AI and saves a mapped record with a custom description.
+    """
+    if request.method == 'POST':
+        # 2. Extract frontend data
+        username = request.POST.get('username')
+        purpose = request.POST.get('purpose', 'General Payment')
+        image_file = request.FILES.get('cheque_image')
 
-    image_file = request.FILES.get("image")
-    purpose = request.data.get("purpose")
+        if not all([username, image_file]):
+            return JsonResponse({
+                "status": "error", 
+                "message": "Missing required fields: username and cheque_image"
+            }, status=400)
 
-    if not image_file:
-        return Response({"error":"No image uploaded"})
+        try:
+            # 3. Find the specific user from your account app
+            try:
+                current_user = User.objects.get(username=username)
+            except User.DoesNotExist:
+                return JsonResponse({
+                    "status": "error", 
+                    "message": f"User '{username}' not found."
+                }, status=404)
+
+            # 4. Process Image for AI
+            image_data = image_file.read()
+            base64_image = base64.b64encode(image_data).decode('utf-8')
+
+            # 5. Groq AI Extraction (Llama 4 Scout)
+            completion = client.chat.completions.create(
+                model="meta-llama/llama-4-scout-17b-16e-instruct",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text", 
+                                "text": "Extract 'date', 'amount', and 'pay_name' from this cheque. Return ONLY JSON."
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}
+                            }
+                        ]
+                    }
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.1
+            )
+
+            # 6. Parse and Clean AI Data
+            extracted = json.loads(completion.choices[0].message.content)
+            payee = extracted.get('pay_name', 'Unknown')
+            
+            # Remove commas from amount for FloatField compatibility
+            raw_amount = str(extracted.get('amount', '0'))
+            clean_amount_str = raw_amount.replace('₹', '').replace('Rs', '').replace(',', '').strip()
+
+            try:
+                clean_amount = float(clean_amount_str) # Now it's just '2500000'
+            except ValueError:
+                clean_amount = 0.0
+
+            # Parse date and determine if it's Issued or Post-Dated
+            raw_date = extracted.get('date')
+            cheque_date = parser.parse(raw_date, dayfirst=True).date() if raw_date else None
+            today = date.today()
+
+            issue_date = None
+            post_date = None
+            if cheque_date:
+                if cheque_date <= today:
+                    issue_date = cheque_date
+                else:
+                    post_date = cheque_date
+
+            # 7. Construct the final description sentence
+            # Example: "Payment of 2235000.0 to Ravuri Manish Ojha for Office Rent."
+            generated_desc = f"Payment of {clean_amount} to {payee} for {purpose}."
+
+            # 8. Save to PostgreSQL
+
+            extension = os.path.splitext(image_file.name)[1]
+            safe_payee = payee.replace(" ", "_")
+
+            filename = f"{safe_payee}{extension}"
+
+            new_record = cheque.objects.create(
+                user=current_user,
+                payee=payee,
+                amount=clean_amount,
+                issue_date=issue_date,
+                post_date=post_date,
+                description=generated_desc,
+                Image=ContentFile(image_data, name=filename),
+                status="Pending"
+)
+
+            return JsonResponse({
+                "status": "success",
+                "message": "Cheque processed and saved.",
+                "data": {
+                    "id": new_record.id,
+                    "description": generated_desc,
+                    "payee": payee,
+                    "amount": clean_amount
+                }
+            })
+
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)}, status=500)
+
+    return JsonResponse({"status": "error", "message": "POST request required"}, status=405)
+
+# Set up logging to see errors in your terminal
+
+User = get_user_model()
+
+def list_of(request, username):
 
     try:
 
-        file_bytes = image_file.read()
+        # Get the user first
+        user = User.objects.get(username=username)
 
-        np_arr = np.frombuffer(file_bytes,np.uint8)
+        # Then fetch cheques using FK
+        user_cheques = cheque.objects.filter(user=user).order_by('-id')
 
-        image = cv2.imdecode(np_arr,cv2.IMREAD_COLOR)
+        cheque_data = []
 
-        image = cv2.resize(image,None,fx=2,fy=2)
+        for c in user_cheques:
 
-        # FULL OCR
-        full_text = pytesseract.image_to_string(image)
-
-        print("RAW OCR:",full_text)
-
-        # REGION OCR
-        cheque_number = detect_cheque_number(image)
-        date = detect_date(image)
-        amount = detect_amount(image)
-        payee = detect_payee(image)
-
-        bank = detect_bank(full_text)
-
-        # GROQ cleanup
-        ai_data = clean_with_groq(full_text)
-
-        if not cheque_number:
-            cheque_number = ai_data.get("cheque_number")
-
-        if not amount:
-            amount = ai_data.get("amount")
-
-        if not payee:
-            payee = ai_data.get("payee")
-
-        if not date:
-            date = ai_data.get("date")
-
-        issue_date = None
-
-        if date:
-            try:
-                issue_date = datetime.strptime(date,"%d/%m/%Y").date()
-            except:
-                issue_date = None
-
-        description = None
-
-        if purpose:
-            description = f"Pay to {payee} for {purpose} via {bank}"
-
-        cheque.objects.create(
-            cheque_no = cheque_number,
-            payee = payee,
-            amount = amount,
-            issue_date = issue_date,
-            description = description,
-            Image = image_file
-        )
-
-        return Response({
-
-            "status":"success",
-
-            "data":{
-                "cheque_number":cheque_number,
-                "payee":payee,
-                "amount":amount,
-                "date":date,
-                "bank":bank
-            },
-
-            "raw_text":full_text
+            cheque_data.append({
+            "id": c.id,
+            "payee": c.payee,
+            "amount": float(c.amount),
+            "description": c.description,
+            "status": c.status,
+            "date": str(c.issue_date or c.post_date or ""),
+            "image": c.Image.url if c.Image else None
         })
+
+        return JsonResponse({
+            "status": "success",
+            "cheques": cheque_data
+        })
+
+    except User.DoesNotExist:
+
+        return JsonResponse({
+            "status": "error",
+            "message": "User not found"
+        }, status=404)
 
     except Exception as e:
 
-        return Response({
-            "error":f"Internal Server Error: {str(e)}"
-        })
+        print("CHEQUE LIST ERROR:", str(e))
+
+        return JsonResponse({
+            "status": "error",
+            "message": str(e)
+        }, status=500)
