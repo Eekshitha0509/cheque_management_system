@@ -6,6 +6,7 @@ User = get_user_model()
 
 class cheque(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    cheque_no = models.IntegerField()
     payee = models.TextField()
     amount = models.FloatField()
     issue_date = models.DateField(null=True, blank=True)
