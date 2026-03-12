@@ -16,6 +16,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [alertList, setAlertList] = useState([]);
 
   const inputRef = useRef(null);
 
@@ -60,11 +61,44 @@ export default function DashboardPage() {
     }
   };
 
-  useEffect(() => {
-    if (authorised && activeTab === "cheques" && !showUploadOptions) {
-      fetchChequeData();
+  const fetchAlerts = async () => {
+
+  const username = localStorage.getItem("username");
+
+  if (!username) return;
+
+  try {
+
+    setLoading(true);
+
+    const response = await axios.get(
+      `http://127.0.0.1:8000/cheque/alerts/${encodeURIComponent(username)}/`
+    );
+
+    if (response.data.status === "success") {
+      setAlertList(response.data.alerts);
     }
-  }, [authorised, activeTab, showUploadOptions]);
+
+  } catch (error) {
+    console.error("Alert fetch error:", error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+useEffect(() => {
+
+  if (!authorised) return;
+
+  if (activeTab === "cheques" && !showUploadOptions) {
+    fetchChequeData();
+  }
+
+  if (activeTab === "alerts") {
+    fetchAlerts();
+  }
+
+}, [authorised, activeTab, showUploadOptions]);
 
   // --- 4.Image Preview ---
   const handleFileChange = (e) => {
@@ -92,7 +126,7 @@ export default function DashboardPage() {
 
     setLoading(true);
     try {
-      const response = await axios.post(
+          const response = await axios.post(
         "http://127.0.0.1:8000/cheque/cheque_reader/",
         formData
       );
@@ -162,7 +196,7 @@ export default function DashboardPage() {
               activeTab === "alerts" ? "text-blue-600 border-b-2 border-blue-600" : "text-slate-400 hover:text-slate-600"
             }`}
           >
-            Notifications
+            Notifications ({alertList.length})
           </button>
         </div>
 
@@ -210,11 +244,7 @@ export default function DashboardPage() {
           ) : (
             <div>
               {activeTab === "cheques" && <Cheques list={chequeList} loading={loading} />}
-              {activeTab === "alerts" && (
-                <div className="py-20 text-center text-slate-400 font-medium">
-                  No new system alerts.
-                </div>
-              )}
+              {activeTab === "alerts" && <Alerts list={alertList} loading={loading} />}
             </div>
           )}
         </div>
@@ -283,6 +313,46 @@ function Cheques({ list, loading }) {
           ) : (
             <tr>
               <td colSpan="5" className="py-20 text-center text-slate-400 font-medium">
+                No transaction records found.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function Alerts({list , loading}){
+  if(loading) {return (
+    <div className="py-20 text-center text-slate-300 animate-pulse font-medium">
+       Fetching your latest alerts...
+    </div>
+  )}
+  return (
+    <div className="w-full overflow-x-auto rounded-xl border border-slate-100">
+      <table className="w-full text-left border-collapse">
+        <thead>
+          <tr className="text-[13px] uppercase tracking-wider text-slate-500 bg-slate-50">
+            <th className="p-4 font-bold border-b">Date</th>
+            <th className="p-4 font-bold border-b">Cheque Date</th>
+            <th className="p-4 font-bold border-b">Alerts</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-50">
+          {list.length > 0 ? (
+            list.map((item, index) => (
+              <tr key={index} className="hover:bg-slate-50/50 transition-colors">
+                <td className="p-4 text-sm text-slate-500">{item.date || "N/A"}</td>
+                <td className="p-4 text-sm text-slate-500">{item.cheque_date}</td>
+                <td className="p-4 font-bold text-slate-800">{item.alerts}</td>
+                <td className="p-4 text-center">
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="3" className="py-20 text-center text-slate-400 font-medium">
                 No transaction records found.
               </td>
             </tr>

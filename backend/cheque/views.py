@@ -12,8 +12,8 @@ from django.core.files.base import ContentFile
 from django.db.models import Q  # Essential for the duplicate check
 from rest_framework.decorators import api_view
 from groq import Groq
-
-from .models import cheque
+from datetime import timedelta
+from .models import cheque,Alerts
 
 logger = logging.getLogger(__name__)
 
@@ -78,10 +78,10 @@ def cheque_reader(request):
 
             # Extract cheque number
             raw_cheque_no = str(extracted.get('chequenumber', '')).strip()
+            clean_no = raw_cheque_no.replace(" ", "")
 
-            # Clean cheque number (remove spaces or special chars)
-            cheque_no = raw_cheque_no.replace(" ", "")
-
+                # keep only first 6 digits
+            cheque_no = clean_no[:6]
             raw_amount = str(extracted.get('amount', '0'))
             clean_amount_str = re.sub(r"[^\d.]", "", raw_amount)
 
@@ -126,6 +126,12 @@ def cheque_reader(request):
             safe_payee = payee.replace(" ", "_")
             filename = f"{safe_payee}_{today}{extension}"
 
+            # alert system
+            cheque_status = "Pending"
+
+            if issue_date and issue_date < date.today():
+                cheque_status = "Cleared"
+
             new_record = cheque.objects.create(
                 user=current_user,
                 cheque_no=cheque_no,
@@ -135,8 +141,26 @@ def cheque_reader(request):
                 post_date=post_date,
                 description=generated_desc,
                 Image=ContentFile(image_data, name=filename), # Saves correctly to media/cheques/
-                status="Pending"
+                status=cheque_status
             )
+
+            if post_date:
+                days_left = (post_date - date.today()).days
+                if 0 <= days_left <= 3:
+                    new_alert = Alerts.objects.create(
+                        user=current_user,
+                        date = date.today(),
+                        cheque_date = post_date,
+                        alerts = f"Cheque Clearance in {days_left} days"
+                    )
+      
+                if date.today() >= post_date + timedelta(days=90):
+                    new_alert = Alerts.objects.create(
+                        user=current_user,
+                        date = date.today(),
+                        cheque_date = post_date,
+                        alerts = f"cheque is expired"
+                    )
 
             return JsonResponse({
                 "status": "success",
@@ -186,3 +210,25 @@ def list_of(request, username):
     except Exception as e:
         print("CHEQUE LIST ERROR:", str(e))
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
+    
+
+@api_view(['GET'])
+def list_alerts(request, username):
+
+    user = User.objects.get(username=username)
+
+    alerts = Alerts.objects.filter(user=user).order_by('-id')
+
+    data = []
+
+    for a in alerts:
+        data.append({
+            "date": str(a.date),
+            "cheque_date": str(a.cheque_date),
+            "alerts": a.alerts
+        })
+
+    return JsonResponse({
+        "status": "success",
+        "alerts": data
+    })
