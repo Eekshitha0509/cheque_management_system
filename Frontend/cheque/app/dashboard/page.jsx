@@ -62,43 +62,42 @@ export default function DashboardPage() {
   };
 
   const fetchAlerts = async () => {
-
-  const username = localStorage.getItem("username");
-
-  if (!username) return;
-
-  try {
+    const username = localStorage.getItem("username");
+    if (!username) return;
 
     setLoading(true);
+    try {
+      const response = await axios.get(
+        `http://127.0.0.1:8000/cheque/alerts/${encodeURIComponent(username)}/`
+      );
 
-    const response = await axios.get(
-      `http://127.0.0.1:8000/cheque/alerts/${encodeURIComponent(username)}/`
-    );
+      // --- DEBUGGING TIP ---
+      // Add this log to see the exact structure of the incoming data.
+      // You should see a key named 'payee_name'.
+      console.log("Alerts Data Received:", response.data);
 
-    if (response.data.status === "success") {
-      setAlertList(response.data.alerts);
+      if (response.data.status === "success") {
+        setAlertList(response.data.alerts);
+      }
+
+    } catch (error) {
+      console.error("Alert fetch error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!authorised) return;
+
+    if (activeTab === "cheques" && !showUploadOptions) {
+      fetchChequeData();
     }
 
-  } catch (error) {
-    console.error("Alert fetch error:", error);
-  } finally {
-    setLoading(false);
-  }
-};
-
-useEffect(() => {
-
-  if (!authorised) return;
-
-  if (activeTab === "cheques" && !showUploadOptions) {
-    fetchChequeData();
-  }
-
-  if (activeTab === "alerts") {
-    fetchAlerts();
-  }
-
-}, [authorised, activeTab, showUploadOptions]);
+    if (activeTab === "alerts") {
+      fetchAlerts();
+    }
+  }, [authorised, activeTab, showUploadOptions]);
 
   // --- 4.Image Preview ---
   const handleFileChange = (e) => {
@@ -126,7 +125,7 @@ useEffect(() => {
 
     setLoading(true);
     try {
-          const response = await axios.post(
+      const response = await axios.post(
         "http://127.0.0.1:8000/cheque/cheque_reader/",
         formData
       );
@@ -312,7 +311,7 @@ function Cheques({ list, loading }) {
             ))
           ) : (
             <tr>
-              <td colSpan="5" className="py-20 text-center text-slate-400 font-medium">
+              <td colSpan="6" className="py-20 text-center text-slate-400 font-medium">
                 No transaction records found.
               </td>
             </tr>
@@ -323,10 +322,11 @@ function Cheques({ list, loading }) {
   );
 }
 
+// --- SUB-COMPONENT: ALERTS TABLE (FIXED) ---
 function Alerts({list , loading}){
   if(loading) {return (
     <div className="py-20 text-center text-slate-300 animate-pulse font-medium">
-       Fetching your latest alerts...
+        Fetching your latest alerts...
     </div>
   )}
   return (
@@ -336,6 +336,7 @@ function Alerts({list , loading}){
           <tr className="text-[13px] uppercase tracking-wider text-slate-500 bg-slate-50">
             <th className="p-4 font-bold border-b">Date</th>
             <th className="p-4 font-bold border-b">Cheque Date</th>
+            <th className="p-4 font-bold border-b">Payee Name</th>
             <th className="p-4 font-bold border-b">Alerts</th>
           </tr>
         </thead>
@@ -345,14 +346,21 @@ function Alerts({list , loading}){
               <tr key={index} className="hover:bg-slate-50/50 transition-colors">
                 <td className="p-4 text-sm text-slate-500">{item.date || "N/A"}</td>
                 <td className="p-4 text-sm text-slate-500">{item.cheque_date}</td>
-                <td className="p-4 font-bold text-slate-800">{item.alerts}</td>
-                <td className="p-4 text-center">
+                
+                {/* --- THE FIX --- */}
+                {/* 1. Change 'item.payee' to 'item.payee_name' */}
+                <td className="p-4 text-sm font-medium text-slate-800">
+                    {item.payee_name || "Unknown Payee"}
                 </td>
+                {/* ----------------- */}
+                
+                <td className="p-4 font-bold text-slate-800">{item.alerts}</td>
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan="3" className="py-20 text-center text-slate-400 font-medium">
+              {/* 2. Changed colSpan from '3' to '4' */}
+              <td colSpan="4" className="py-20 text-center text-slate-400 font-medium">
                 No transaction records found.
               </td>
             </tr>

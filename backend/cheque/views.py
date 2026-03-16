@@ -2,29 +2,29 @@ import base64
 import json
 import os
 import logging
-from datetime import date
-from dateutil import parser
 import re
+from datetime import date, timedelta
+from dateutil import parser
+
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
-from django.db.models import Q  # Essential for the duplicate check
+from django.db.models import Q
 from rest_framework.decorators import api_view
 from groq import Groq
-from datetime import timedelta
-from .models import cheque,Alerts
+from .models import cheque, Alerts
 
 logger = logging.getLogger(__name__)
 
-# 1. Initialize Groq and the Custom User Model
+# Initialize Groq
 client = Groq(api_key="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")
 User = get_user_model()
 
 @csrf_exempt
 def cheque_reader(request):
     if request.method == 'POST':
-        # 2. Extract frontend data
+        # 1. Extract frontend data
         username = request.POST.get('username')
         purpose = request.POST.get('purpose', 'General Payment')
         image_file = request.FILES.get('cheque_image')
@@ -36,7 +36,7 @@ def cheque_reader(request):
             }, status=400)
 
         try:
-            # 3. Find user
+            # 2. Find user
             try:
                 current_user = User.objects.get(username=username)
             except User.DoesNotExist:
@@ -45,11 +45,11 @@ def cheque_reader(request):
                     "message": f"User '{username}' not found."
                 }, status=404)
 
-            # 4. Process Image
+            # 3. Process Image
             image_data = image_file.read()
             base64_image = base64.b64encode(image_data).decode('utf-8')
 
-            # 5. AI Extraction
+            # 4. AI Extraction with Improved Prompt
             completion = client.chat.completions.create(
                 model="meta-llama/llama-4-scout-17b-16e-instruct",
                 messages=[
@@ -58,7 +58,12 @@ def cheque_reader(request):
                         "content": [
                             {
                                 "type": "text", 
-                                "text": "Extract 'date', 'amount','chequenumber' and 'pay_name' from this cheque. Return ONLY JSON."
+                                "text": (
+                                    "Extract 'date', 'amount', 'chequenumber', and 'pay_name' from this cheque. "
+                                    "The 'chequenumber' is exactly the first 6 digits found in the MICR line at the bottom. "
+                                    "If a field is missing or unreadable, return 0 for numbers and 'Unknown' for text. "
+                                    "Return ONLY valid JSON."
+                                )
                             },
                             {
                                 "type": "image_url",
@@ -71,65 +76,95 @@ def cheque_reader(request):
                 temperature=0.1
             )
 
-            # 6. Parse Data
+            # 5. Parse Data and Sanitization
             extracted = json.loads(completion.choices[0].message.content)
             print("AI OUTPUT:", extracted)
             payee = extracted.get('pay_name', 'Unknown')
 
-            # Extract cheque number
-            raw_cheque_no = str(extracted.get('chequenumber', '')).strip()
-            clean_no = raw_cheque_no.replace(" ", "")
-
-                # keep only first 6 digits
-            cheque_no = clean_no[:6]
+            # robustness check for chequenumber 0 
+            raw_cheque_no = str(extracted.get('chequenumber', '0')).strip()
+            clean_no_str = re.sub(r"\D", "", raw_cheque_no) # Remove all non-digits
+            # Using int conversion for database storage compatibility (IntegerField)
+            cheque_no = int(clean_no_str[:6]) if clean_no_str else 0
+            
+            # and amount
             raw_amount = str(extracted.get('amount', '0'))
             clean_amount_str = re.sub(r"[^\d.]", "", raw_amount)
-
             try:
                 clean_amount = float(clean_amount_str)
-            except:
+            except ValueError:
                 clean_amount = 0.0
 
             raw_date = extracted.get('date')
-            cheque_date = parser.parse(raw_date, dayfirst=True).date() if raw_date else None
-            today = date.today()
+            cheque_date = None
+            if raw_date and raw_date != "0":
+                try:
+                    cheque_date = parser.parse(str(raw_date), dayfirst=True).date()
+                except (ValueError, TypeError):
+                    cheque_date = None
 
+            today = date.today()
             issue_date = None
             post_date = None
+
             if cheque_date:
                 if cheque_date <= today:
                     issue_date = cheque_date
                 else:
                     post_date = cheque_date
 
-            # --- CORRECTED DUPLICATE CHECK ---
-            # Use 'current_user' (the object) instead of 'username' (the string)
+            # ========================================================
+            # --- 6. DUPLICATE CHECK: TRANSACTION SIGNATURE & ALERT PREVENTION (FIXED) ---
+            # We enforce uniqueness by checking the combination of Payee, Amount, and Date.
+            # This definitive signature blocks physical duplicates even if AI misread the number.
+
             is_duplicate = cheque.objects.filter(
                 user=current_user,
                 payee=payee,
-                amount=clean_amount
+                amount=clean_amount,
+                cheque_no=cheque_no
             ).filter(
                 Q(issue_date=issue_date) | Q(post_date=post_date)
             ).exists()
 
             if is_duplicate:
+                # We block further processing. The clutter prevention is active.
+
+                # FALLBACK ALERT LOGIC (moved here):
+                # If AI missed the number *this time* (0), but it is a duplicate transaction,
+                # we block the duplicate record and create a specific alert notifying the user
+                # to verify the number from the image. We also populate the payee field.
+                if cheque_no == 0:
+                    Alerts.objects.create(
+                        user=current_user,
+                        payee=payee, # Populate payee field
+                        date=today,
+                        cheque_date=cheque_date,
+                        alerts=(
+                            f"Verification Alert: System unable to read cheque number for unverified "
+                            f"duplicate payment signature (₹{clean_amount} to {payee}, Date: {cheque_date or 'Unknown'})."
+                        )
+                    )
+
                 return JsonResponse({
                     "status": "error",
-                    "message": "Duplicate Entry: This cheque has already been digitized."
+                    "message": (
+                        "Duplicate Entry Blocked: Clutter prevention active. A unique cheque "
+                        "transaction signature with this Payee, Amount, and Date has already been recorded."
+                    ),
                 }, status=409)
+            # ========================================================
 
-            # 7. Construct description
+            # 7. Final Prep and Save
             generated_desc = f"Payment of ₹{clean_amount} to {payee} for {purpose}."
-
-            # 8. Save with custom filename
-            extension = os.path.splitext(image_file.name)[1]
-            safe_payee = payee.replace(" ", "_")
+            
+            extension = os.path.splitext(image_file.name)[1] or ".jpg"
+            # safe names
+            safe_payee = re.sub(r'\W+', '_', payee)
             filename = f"{safe_payee}_{today}{extension}"
 
-            # alert system
             cheque_status = "Pending"
-
-            if issue_date and issue_date < date.today():
+            if issue_date and issue_date < today:
                 cheque_status = "Cleared"
 
             new_record = cheque.objects.create(
@@ -140,35 +175,41 @@ def cheque_reader(request):
                 issue_date=issue_date,
                 post_date=post_date,
                 description=generated_desc,
-                Image=ContentFile(image_data, name=filename), # Saves correctly to media/cheques/
+                Image=ContentFile(image_data, name=filename),
                 status=cheque_status
             )
 
+            # ========================================================
+            # --- 8. ALERT LOGIC (FIXED): PDCs AND EXPIRED ---
+            # Now that duplicates are definitively blocked, this section will only run
+            # once for a unique logical cheque.
             if post_date:
-                days_left = (post_date - date.today()).days
+                days_left = (post_date - today).days
                 if 0 <= days_left <= 3:
-                    new_alert = Alerts.objects.create(
+                    Alerts.objects.create(
                         user=current_user,
-                        date = date.today(),
-                        cheque_date = post_date,
-                        alerts = f"Cheque Clearance in {days_left} days"
+                        payee=payee, # Populate payee field
+                        date=today,
+                        cheque_date=post_date,
+                        alerts=f"Cheque Clearance in {days_left} days"
                     )
-      
-                if date.today() >= post_date + timedelta(days=90):
-                    new_alert = Alerts.objects.create(
+                
+                if today >= post_date + timedelta(days=90):
+                    Alerts.objects.create(
                         user=current_user,
-                        date = date.today(),
-                        cheque_date = post_date,
-                        alerts = f"cheque is expired"
+                        payee=payee, # Populate payee field
+                        date=today,
+                        cheque_date=post_date,
+                        alerts="Cheque is expired"
                     )
+            # ========================================================
 
             return JsonResponse({
                 "status": "success",
                 "message": "Cheque processed and saved.",
                 "data": {
                     "id": new_record.id,
-                    "cheque_no" : cheque_no,
-                    "description": generated_desc,
+                    "cheque_no": cheque_no,
                     "payee": payee,
                     "amount": clean_amount
                 }
@@ -176,7 +217,7 @@ def cheque_reader(request):
 
         except Exception as e:
             logger.error(f"CHEQUE READER ERROR: {str(e)}")
-            return JsonResponse({"status": "error", "message": str(e)}, status=500)
+            return JsonResponse({"status": "error", "message": f"Internal Error: {str(e)}"}, status=500)
 
     return JsonResponse({"status": "error", "message": "POST request required"}, status=405)
 
@@ -223,8 +264,9 @@ def list_alerts(request, username):
 
     for a in alerts:
         data.append({
-            "date": str(a.date),
+            "date": str(a.date), 
             "cheque_date": str(a.cheque_date),
+            "payee_name":a.payee,
             "alerts": a.alerts
         })
 

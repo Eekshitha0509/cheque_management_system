@@ -12,14 +12,20 @@ class chequeSerializer(serializers.ModelSerializer):
         model = cheque 
         fields = "__all__"
 
-    def validate_cheque_id(self, value):
-        # Ensure cheque_id is exactly 6 digits
+    def validate_cheque_no(self, value):
+
+        if value in ["NotFound", None, ""]:
+            raise serializers.ValidationError("Cheque number could not be detected.")
+
         str_val = str(value).strip()
+
         if not str_val.isdigit():
-            raise serializers.ValidationError('The cheque_id must contain only digits.')
+            raise serializers.ValidationError("Cheque number must contain only digits.")
+
         if len(str_val) != 6:
-            raise serializers.ValidationError('The cheque_id must be exactly 6 digits.')
-        return str_val
+            raise serializers.ValidationError("Cheque number must be exactly 6 digits.")
+
+        return int(str_val)
 
     def validate_amount(self, value):
         if value <= 0:
@@ -42,10 +48,6 @@ class chequeSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, data):
-        """
-        Object-level validation for Cheque
-        """
-        # Comparison: Old DB value vs New Request value
         if self.instance: 
             new_status = data.get('status')
             old_status = self.instance.status
@@ -62,14 +64,11 @@ class chequeSerializer(serializers.ModelSerializer):
 # USER SERIALIZER
 # ==========================================
 class UserSerializer(serializers.ModelSerializer):
-    # Password should be write-only for security
     password = serializers.CharField(write_only=True, required=True)
 
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'password', 'mobilenumber', 'bank_name']
-
-    # --- Field-Level Validations ---
 
     def validate_username(self, value):
         if len(value) < 3:
@@ -78,31 +77,25 @@ class UserSerializer(serializers.ModelSerializer):
 
     def validate_bank_name(self, value):
         allowed_banks = ['SBI', 'HDFC', 'ICICI', 'AXIS']
-        # Converting to uppercase to ensure case-insensitive matching if needed
         if value and value.upper() not in allowed_banks:
-            raise serializers.ValidationError(f"Bank name must be one of: {', '.join(allowed_banks)}")
+            raise serializers.ValidationError(
+                f"Bank name must be one of: {', '.join(allowed_banks)}"
+            )
         return value
 
-    # --- Object-Level Validations ---
-
     def validate(self, data):
-        # Example logic: Ensure staff members have an email
         if data.get('is_staff') and not data.get('email'):
-            raise serializers.ValidationError({"email": "Staff members must have a registered email address."})
+            raise serializers.ValidationError(
+                {"email": "Staff members must have a registered email address."}
+            )
         return data
 
-    # --- Overriding Create ---
-
     def create(self, validated_data):
-        """
-        Overrides the default create method to use create_user.
-        This ensures the password is saved as a secure hash, not plain text.
-        """
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data.get('email', ''),
             password=validated_data['password'],
-            mobilenumber=validated_data.get('mobile_number'),
+            mobilenumber=validated_data.get('mobilenumber'),
             bank_name=validated_data.get('bank_name')
         )
         return user

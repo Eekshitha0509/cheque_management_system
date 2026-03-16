@@ -7,7 +7,7 @@ User = get_user_model()
 
 class cheque(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    cheque_no = models.IntegerField()
+    cheque_no = models.IntegerField(unique=True)
     payee = models.TextField()
     amount = models.FloatField()
     issue_date = models.DateField(null=True, blank=True)
@@ -21,6 +21,7 @@ class Alerts(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateField(default=date.today)   
+    payee = models.CharField()
     cheque_date = models.DateField()
     alerts = models.TextField()
 
