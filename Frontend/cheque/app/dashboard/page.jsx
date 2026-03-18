@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const [previewImage, setPreviewImage] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [alertList, setAlertList] = useState([]);
+  const [interval,setInterval] = useState([]);
 
   const inputRef = useRef(null);
 
@@ -143,6 +144,23 @@ export default function DashboardPage() {
     }
   };
 
+  const handleMarkCleared = async (chequeId) => {
+  if (!window.confirm("Mark this cheque as CLEARED? This will remove all associated alerts.")) return;
+
+  try {
+    const response = await axios.post(`http://127.0.0.1:8000/cheque/clear/${chequeId}/`);
+    
+    if (response.data.status === "success") {
+      // Refresh both lists to show the updated status and removed alerts
+      fetchChequeData();
+      fetchAlerts(); 
+    }
+  } catch (error) {
+    console.error("Clear Error:", error);
+    alert("Failed to update status.");
+  }
+};
+
   const resetUploadState = () => {
     setPurpose("");
     if (previewImage) URL.revokeObjectURL(previewImage);
@@ -195,7 +213,7 @@ export default function DashboardPage() {
               activeTab === "alerts" ? "text-blue-600 border-b-2 border-blue-600" : "text-slate-400 hover:text-slate-600"
             }`}
           >
-            Notifications ({alertList.length})
+            Notifications
           </button>
         </div>
 
@@ -205,18 +223,29 @@ export default function DashboardPage() {
             <div className="max-w-md bg-slate-50 p-8 rounded-3xl border border-slate-100 mx-auto">
               <h2 className="text-xl font-bold mb-6 text-center">Digitalize Cheque</h2>
               <select
-                value={purpose}
-                onChange={(e) => setPurpose(e.target.value)}
-                className="w-full p-4 rounded-2xl border-none ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-500 outline-none mb-6 bg-white"
-              >
-                <option value="">-- Select Purpose --</option>
-                {chequePurposes.map((p, i) => <option key={i} value={p}>{p}</option>)}
-              </select>
+              value={purpose}
+              onChange={(e) => setPurpose(e.target.value)}
+              className="w-full px-5 py-4 rounded-2xl bg-white text-slate-700 
+                        border border-blue-200 shadow-sm 
+                        focus:outline-none focus:ring-2 focus:ring-blue-500 
+                        focus:border-blue-500 transition-all duration-200
+                        appearance-none cursor-pointer-blue"
+            >
+              <option value="" disabled className="text-slate-400">
+                -- Select Purpose --
+            </option>
+
+            {chequePurposes.map((p, i) => (
+              <option key={i} value={p} className="py-3">
+                {p}
+              </option>
+            ))}
+          </select>
 
               {purpose && (
                 <button
                   onClick={() => inputRef.current.click()}
-                  className="w-full bg-slate-900 text-white p-4 rounded-2xl font-bold hover:opacity-90 transition mb-4 shadow-lg"
+                  className="w-full my-5 bg-slate-900 text-white p-4 rounded-2xl font-bold hover:opacity-90 transition mb-4 shadow-lg transition-all active:scale-95"
                 >
                   {previewImage ? "Retake Image" : "Capture Cheque Image"}
                 </button>
@@ -234,7 +263,7 @@ export default function DashboardPage() {
               {selectedFile && (
                 <button
                   onClick={handleSubmitCheque}
-                  className="w-full bg-blue-600 text-white p-4 rounded-2xl font-bold hover:bg-blue-700 transition disabled:bg-blue-300"
+                  className="w-full bg-blue-600 text-white p-4 rounded-2xl font-bold hover:bg-blue-700 transition disabled:bg-blue-300 transition-all active:scale-95"
                 >
                   Confirm & Submit
                 </button>
@@ -242,7 +271,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div>
-              {activeTab === "cheques" && <Cheques list={chequeList} loading={loading} />}
+              {activeTab === "cheques" && <Cheques list={chequeList} loading={loading} onClear={handleMarkCleared}/>}
               {activeTab === "alerts" && <Alerts list={alertList} loading={loading} />}
             </div>
           )}
@@ -263,7 +292,7 @@ export default function DashboardPage() {
 }
 
 // --- SUB-COMPONENT: CHEQUES TABLE ---
-function Cheques({ list, loading }) {
+function Cheques({ list, loading, onClear }) {
   if (loading) return (
     <div className="py-20 text-center text-slate-300 animate-pulse font-medium">
       Connecting to ledger...
@@ -280,6 +309,7 @@ function Cheques({ list, loading }) {
             <th className="p-4 font-bold border-b">Payee</th>
             <th className="p-4 font-bold border-b">Description</th>
             <th className="p-4 font-bold text-center border-b">Status</th>
+            <th className="p-4 font-bold text-center border-b">Action</th>
             <th className="p-4 font-bold text-right border-b">Reference</th>
           </tr>
         </thead>
@@ -291,11 +321,32 @@ function Cheques({ list, loading }) {
                 <td className="p-4 text-sm text-slate-500">{item.cheque_no}</td>
                 <td className="p-4 font-bold text-slate-800">{item.payee}</td>
                 <td className="p-4 text-sm text-slate-500">{item.description}</td>
+                
+                {/* STATUS COLUMN */}
                 <td className="p-4 text-center">
-                  <span className="text-[12px] font-bold px-3 py-1 bg-green-50 text-green-600 rounded-full border border-green-100 uppercase">
+                  <span className={`text-[12px] font-bold px-3 py-1 rounded-full border uppercase ${
+                    item.status === 'CLEARED' 
+                      ? "bg-green-50 text-green-600 border-green-100" 
+                      : "bg-yellow-50 text-yellow-600 border-yellow-100"
+                  }`}>
                     {item.status}
                   </span>
                 </td>
+
+                {/* ACTION COLUMN */}
+                <td className="p-4 text-center">
+                  {item.status !== 'CLEARED' ? (
+                    <button 
+                      onClick={() => onClear(item.id)}
+                      className="text-[11px] font-bold text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-all active:scale-95"
+                    >
+                      Mark Clear
+                    </button>
+                  ) : (
+                    <span className="text-[11px] text-slate-400 italic">No Action</span>
+                  )}
+                </td>
+
                 <td className="p-4 text-right">
                   {item.image ? (
                     <a href={`http://127.0.0.1:8000${item.image}`} target="_blank" rel="noopener noreferrer" className="inline-block hover:scale-105 transition-transform">
@@ -311,7 +362,7 @@ function Cheques({ list, loading }) {
             ))
           ) : (
             <tr>
-              <td colSpan="6" className="py-20 text-center text-slate-400 font-medium">
+              <td colSpan="7" className="py-20 text-center text-slate-400 font-medium">
                 No transaction records found.
               </td>
             </tr>
@@ -321,7 +372,6 @@ function Cheques({ list, loading }) {
     </div>
   );
 }
-
 // --- SUB-COMPONENT: ALERTS TABLE (FIXED) ---
 function Alerts({list , loading}){
   if(loading) {return (

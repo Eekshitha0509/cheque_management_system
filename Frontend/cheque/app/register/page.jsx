@@ -128,7 +128,7 @@ export default function RegisterPage() {
           <input
             type="text"
             name="bank_name"
-            placeholder="Bank Name (SBI, HDFC, ICICI, AXIS)"
+            placeholder="Bank Name (SBI, HDFC, ICICI, AXIS ,ICICI)"
             value={formData.bank_name}
             required
             onChange={handleChange}

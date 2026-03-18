@@ -41,11 +41,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'cheque',
     'account',
     'api',
     'rest_framework',
-    'corsheaders'
+    'corsheaders',
+    'cheque.apps.ChequeConfig',
 ]
 
 MIDDLEWARE = [
