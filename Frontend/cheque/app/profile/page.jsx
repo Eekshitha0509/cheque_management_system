@@ -4,91 +4,121 @@ import axios from "axios";
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
-  const [newAmount, setNewAmount] = useState("");
+  const [stats, setStats] = useState({ total: 0, cleared: 0, pending: 0 });
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     const user = localStorage.getItem("username");
-    const res = await axios.get(`http://127.0.0.1:8000/account/profile/${user}/`);
-    if (res.data.status === "success") setProfile(res.data.data);
-    setLoading(false);
-  };
+    try {
+      const profileRes = await axios.get(`http://127.0.0.1:8000/account/profile/${user}/`);
+      if (profileRes.data.status === "success") setProfile(profileRes.data.data);
 
-  useEffect(() => { fetchData(); }, []);
-
-  const handleUpdate = async () => {
-    const user = localStorage.getItem("username");
-    const res = await axios.post(`http://127.0.0.1:8000/account/update-balance/${user}/`, {
-      balance: newAmount
-    });
-    if (res.data.status === "success") {
-      fetchData(); // Refresh UI
-      setNewAmount("");
-      alert("Wallet Updated!");
+      const statsRes = await axios.get(`http://127.0.0.1:8000/cheque/list/${user}/`);
+      if (statsRes.data.status === "success") {
+        const cheques = statsRes.data.cheques;
+        setStats({
+          total: cheques.length,
+          cleared: cheques.filter(c => c.status === 'CLEARED').length,
+          pending: cheques.filter(c => c.status === 'PENDING').length
+        });
+      }
+    } catch (err) {
+      console.error("Fetch error:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (loading) return <div className="p-20 text-center animate-pulse text-slate-400">Loading Wallet...</div>;
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="w-10 h-10 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div>
+    </div>
+  );
 
   return (
-    <div className="bg-slate-50 min-h-screen p-6 md:p-12 font-sans">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="bg-[#fcfcfc] min-h-screen p-6 md:p-12 font-sans text-slate-900">
+      <div className="max-w-5xl mx-auto space-y-12">
         
-        {/* WALLET & TOP-UP SECTION */}
-        <div className="flex flex-col md:flex-row gap-8">
-          {/* BALANCE CARD */}
-          <div className="flex-1 bg-slate-900 rounded-[3rem] p-10 text-white shadow-2xl border border-slate-800">
-            <p className="text-slate-500 text-xs font-black uppercase tracking-[0.2em]">Verified Balance</p>
-            <h2 className="text-5xl font-bold mt-6 tracking-tighter">₹{profile?.balance?.toLocaleString()}</h2>
-            <div className="mt-12 flex items-center gap-3">
-              <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_green]"></div>
-              <span className="text-[10px] text-slate-500 font-bold uppercase">System Active</span>
+        {/* ENLARGED HEADER */}
+        <div className="text-center space-y-3">
+          <h2 className="text-3xl font-extrabold uppercase tracking-[0.2em] text-blue-600">
+            Account Overview
+          </h2>
+          <h1 className="text-2xl font-black tracking-tight text-slate-900">
+            Welcome, {profile?.username || "User"}
+          </h1>
+        </div>
+
+        {/* CENTERED HERO SECTION: BALANCE & DETAILS */}
+        <div className="flex flex-col lg:flex-row justify-center items-stretch gap-8">
+          
+          {/* REFINED BALANCE CARD */}
+          <div className="w-full lg:w-[450px] bg-slate-900 rounded-[2.5rem] p-12 text-white shadow-2xl relative overflow-hidden flex flex-col justify-center">
+            <p className="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-2">Current Balance</p>
+            <h2 className="text-6xl font-black mt-2 tracking-tighter">
+              ₹{profile?.balance?.toLocaleString() || "0"}
+            </h2>
+            <div className="mt-8 flex items-center gap-3">
+               <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-[0_0_12px_rgba(52,211,153,0.6)] animate-pulse"></div>
+               <span className="text-slate-300 text-[11px] font-bold uppercase tracking-widest">System Verified</span>
             </div>
+            {/* Visual Flare */}
+            <div className="absolute -right-4 -top-4 w-40 h-40 bg-blue-500/20 blur-3xl rounded-full"></div>
           </div>
 
-          {/* UPDATE INPUT */}
-          <div className="w-full md:w-80 bg-white rounded-[3rem] p-10 border border-slate-200 shadow-sm flex flex-col justify-center">
-            <h3 className="font-bold text-slate-800 mb-6">Fund Account</h3>
-            <input 
-              type="number" 
-              value={newAmount}
-              onChange={(e) => setNewAmount(e.target.value)}
-              placeholder="Enter Amount"
-              className="w-full bg-slate-50 text-black border-2 rounded-2xl px-6 py-5 mb-4 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-lg"
-            />
-            <button 
-              onClick={handleUpdate}
-              className="w-full bg-blue-600 text-white py-5 rounded-2xl font-bold hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-100"
-            >
-              Update Balance
-            </button>
+          {/* COMPACT DETAILS CARD (Enhanced Icons) */}
+          <div className="w-full lg:w-[350px] bg-white border border-slate-100 rounded-[2.5rem] p-10 shadow-sm flex flex-col justify-center space-y-8">
+            <InfoBlock label="Profile Holder" value={profile?.username} icon="👤" />
+            <InfoBlock label="Associated Bank" value={profile?.bank_name || "HDFC Bank"} icon="🏦" />
+            <InfoBlock label="Contact Point" value={`+91 ${profile?.mobile || "---"}`} icon="📱" />
           </div>
         </div>
 
-        {/* ACCOUNT CREDENTIALS TABLE */}
-        <div className="bg-white rounded-[3rem] p-12 border border-slate-200 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-y-12 gap-x-16">
-            <div>
-              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-3">Account Holder</p>
-              <p className="text-xl font-bold text-slate-800 uppercase">{profile?.username}</p>
-            </div>
-            <div>
-              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-3">Linked Bank</p>
-              <p className="text-xl font-bold text-slate-800">{profile?.bank_name}</p>
-            </div>
-            <div>
-              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-3">Primary Mobile</p>
-              <p className="text-xl font-bold text-slate-800">+91 {profile?.mobile}</p>
-            </div>
-            <div>
-              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-3">Verification</p>
-              <span className={`inline-flex px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter border ${profile?.is_verified ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
-                {profile?.is_verified ? "● KYC Verified" : "○ Unverified"}
-              </span>
-            </div>
+        {/* LOWER SECTION: CHEQUE METRICS */}
+        <div className="max-w-4xl mx-auto space-y-8 pt-4">
+          <div className="flex items-center gap-6">
+            <h3 className="text-xs font-black uppercase tracking-[0.3em] text-slate-500 whitespace-nowrap">Status Ledger</h3>
+            <div className="h-[2px] bg-slate-100 w-full"></div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <StatCard label="Total Cheques" value={stats.total} />
+            <StatCard label="Cleared Items" value={stats.cleared} isSuccess />
+            <StatCard label="Pending Items" value={stats.pending} isWarning />
           </div>
         </div>
 
+      </div>
+    </div>
+  );
+}
+
+// Sub-component for Statistics
+function StatCard({ label, value, isSuccess, isWarning }) {
+  return (
+    <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm transition-all hover:translate-y-[-4px] hover:shadow-lg">
+      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">{label}</p>
+      <p className={`text-4xl font-black tracking-tighter ${isSuccess ? 'text-emerald-600' : isWarning ? 'text-amber-600' : 'text-slate-900'}`}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
+// Sub-component for Info Blocks with stronger icons
+function InfoBlock({ label, value, icon }) {
+  return (
+    <div className="flex items-center gap-5 border-b border-slate-50 pb-6 last:border-0 last:pb-0">
+      <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-2xl shadow-inner border border-slate-100">
+        <span className="opacity-100">{icon}</span>
+      </div>
+      <div>
+        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">{label}</p>
+        <p className="text-base font-black text-slate-800 truncate">{value || "---"}</p>
       </div>
     </div>
   );

@@ -69,7 +69,7 @@ export default function LoginPage() {
 
         <button
           type="submit"
-          className="bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition"
+          className="bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-all active:scale-95"
         >
           Login
         </button>
@@ -79,7 +79,7 @@ export default function LoginPage() {
 
           <Link
             href="/register"
-            className="inline-block px-10 py-4 bg-blue-600 text-white rounded-xl font-bold text-lg hover:bg-blue-700 shadow-lg transition"
+            className="inline-block px-10 py-4 bg-blue-600 text-white rounded-xl font-bold text-lg hover:bg-blue-700 shadow-lg transition-all active:scale-95"
           >
             Register
           </Link>

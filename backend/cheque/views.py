@@ -56,7 +56,7 @@ def cheque_reader(request):
 
         # --- REFINED AI PROMPT ---
         completion = client.chat.completions.create(
-            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            model="llama-3.2-11b-vision-preview",
             messages=[{
                 "role": "user",
                 "content": [
@@ -108,6 +108,13 @@ def cheque_reader(request):
         issue_date = cheque_date if cheque_date <= today else None
         post_date = cheque_date if cheque_date > today else None
 
+        is_duplicate = False
+        if cheque_no != 0:
+            is_duplicate = cheque.objects.filter(
+                user=current_user, 
+                cheque_no=cheque_no
+            ).exists()
+
         # --- SAVE & ALERTS ---
         new_record = cheque.objects.create(
             user=current_user,
@@ -120,6 +127,15 @@ def cheque_reader(request):
             Image=ContentFile(image_data, name=f"{payee}_{today}.jpg"),
             status='PENDING'
         )
+
+        if is_duplicate:
+            Alerts.objects.create(
+                user=current_user,
+                cheque=new_record,
+                payee=payee,
+                cheque_date=cheque_date or today,
+                alerts=f"🚫 DUPLICATE DETECTED: Cheque #{cheque_no} already exists in your ledger."
+            )
 
         # Alert Logic (Your Structured Design)
         current_balance = get_actual_balance(current_user)
@@ -137,7 +153,8 @@ def cheque_reader(request):
         return JsonResponse({"status": "success", "message": "Cheque saved."})
 
     except Exception as e:
-        logger.error(f"CHEQUE READER ERROR: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc()) # This prints the FULL error to your terminal
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
 @api_view(['GET'])
@@ -163,69 +180,174 @@ def list_of(request, username):
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
 
+from django.db.models import Q
+from datetime import date
+from django.http import JsonResponse
+from rest_framework.decorators import api_view
+
 @api_view(['GET'])
 def list_alerts(request, username):
-    """Dynamic Notifications with Automatic Cleanup."""
+    """Dynamic Notifications with Automatic Cleanup and Generation."""
     try:
         current_user = User.objects.get(username=username)
         today = date.today()
+        # Ensure this function returns a numeric value
         current_balance = get_actual_balance(current_user)
 
-        #  After Due Date: Auto-remove expired alerts
+        # 1. Cleanup: Auto-remove expired alerts (past the due date)
         Alerts.objects.filter(user=current_user, cheque_date__lt=today).delete()
 
-        # Before &  On Due Date: Process PENDING risky cheques
-        risky_cheques = cheque.objects.filter(
-            user=current_user, status='PENDING', amount__gt=current_balance
-        ).filter(Q(post_date__gte=today) | Q(issue_date__gte=today) | Q(post_date__gte>=today)) 
+        # 2. Fetch ALL relevant PENDING cheques for this user
+        # We fetch all pending cheques that are due today or in the future
+        relevant_cheques = cheque.objects.filter(
+            user=current_user, 
+            status='PENDING'
+        ).filter(
+            Q(post_date__gte=today) | Q(issue_date__gte=today)
+        )
 
-        for c in risky_cheques:
-    # Use whichever date is available
+        for c in relevant_cheques:
+            # Use whichever date is available for the calculation
             c_date = c.post_date or c.issue_date
+            if not c_date:
+                continue
+                
             days_diff = (c_date - today).days
             
-            # 1. PRIORITY: BOUNCE ALERTS (Balance is low)
-            if current_balance < c.amount:
-                if days_diff == 0:
-                    msg = f"🚨 Due today: Balance (₹{current_balance}) is insufficient for ₹{c.amount}!"
-                elif 0 < days_diff <= 3:
-                    msg = f"⚠️ May bounce: Balance (₹{current_balance}) is lower than ₹{c.amount} due in {days_diff} days."
+            # Logic: We only care about things happening in the next 3 days
+            if 0 <= days_diff <= 3:
+                # PRIORITY A: BOUNCE ALERTS (Balance is low)
+                if current_balance < c.amount:
+                    if days_diff == 0:
+                        msg = f"🚨 Due today: Balance (₹{current_balance}) is insufficient for ₹{c.amount}!"
+                    else:
+                        msg = f"⚠️ May bounce: Balance (₹{current_balance}) is lower than ₹{c.amount} due in {days_diff} days."
+                
+                # PRIORITY B: STANDARD REMINDERS (Balance is okay)
                 else:
-                    continue 
+                    if days_diff == 0:
+                        msg = "✅ Cheque Clearance today"
+                    else:
+                        msg = f"📅 Cheque Clearance in {days_diff} days"
 
-            # 2. SECONDARY: STANDARD CLEARANCE REMINDERS (Balance is okay)
-            else:
-                if days_diff == 0:
-                    msg = "✅ Cheque Clearance today"
-                elif 0 < days_diff <= 3:
-                    msg = f"📅 Cheque Clearance in {days_diff} days"
-                else:
-                    # Keep the notifications clean; don't show reminders for distant dates
-                    continue
+                # 3. Save or Update the Alert
+                # Note: We use the 'cheque' instance as the unique identifier
+                Alerts.objects.update_or_create(
+                    user=current_user, 
+                    cheque=c,
+                    defaults={
+                        'alerts': msg, 
+                        'payee': c.payee, 
+                        'cheque_date': c_date
+                    }
+                )
 
-            Alerts.objects.update_or_create(
-                user=current_user, cheque=c,
-                defaults={'alerts': msg, 'payee': c.payee, 'cheque_date': c_date}
-            )
+        # 4. Final Cleanup: If a cheque was cleared/deleted, remove its alert
+        # (This handles cases where the user marks a cheque as CLEARED in the history tab)
+        active_cheque_ids = relevant_cheques.values_list('id', flat=True)
+        Alerts.objects.filter(user=current_user).exclude(cheque_id__in=active_cheque_ids).delete()
 
-        alerts_list = Alerts.objects.filter(user=current_user).order_by('-id')
-        data = [{"date": str(a.date), "cheque_date": str(a.cheque_date), "payee_name": a.payee, "alerts": a.alerts} for a in alerts_list]
+        # 5. Return the list
+        alerts_list = Alerts.objects.filter(user=current_user).order_by('cheque_date')
+        data = [
+            {
+                "date": str(a.date), 
+                "cheque_date": str(a.cheque_date), 
+                "payee_name": a.payee, 
+                "alerts": a.alerts
+            } for a in alerts_list
+        ]
+        
         return JsonResponse({"status": "success", "alerts": data})
+
+    except User.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "User not found"}, status=404)
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
 
 @api_view(['POST'])
 def mark_as_cleared(request, cheque_id):
-    """Manual Status Update: Ledger Truth -> Notification Cleanup."""
+    """
+    Manual Status Update: Ledger Truth -> Notification Cleanup.
+    Now supports toggling between CLEARED and PENDING.
+    """
     try:
         c = cheque.objects.get(id=cheque_id)
-        c.status = 'CLEARED'
+        
+        # Get the status from the request body (sent by React)
+        # Default to 'CLEARED' if no status is provided in the POST
+        new_status = request.data.get('status', 'CLEARED')
+        
+        c.status = new_status
         c.save()
         
-        # Immediately remove associated alert
-        Alerts.objects.filter(cheque=c).delete()
+        if new_status == 'CLEARED':
+            # Immediately remove associated alerts if cleared
+            Alerts.objects.filter(cheque=c).delete()
+            msg = "Cheque marked as CLEARED. Alerts removed."
+        else:
+            msg = "Cheque reopened as PENDING. Alerts will be recalculated."
         
-        return JsonResponse({"status": "success", "message": "Marked as CLEARED."})
+        return JsonResponse({
+            "status": "success", 
+            "message": msg,
+            "current_status": c.status
+        })
+        
     except cheque.DoesNotExist:
         return JsonResponse({"status": "error", "message": "Cheque not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)
+
+@api_view(['POST'])
+def update_cheque_number(request, cheque_id):
+    """
+    Updates the cheque number manually and checks for duplicates.
+    """
+    try:
+        # 1. Fetch the cheque instance
+        instance = cheque.objects.get(id=cheque_id)
+        current_user = instance.user
+        
+        # 2. Get the new number from the request body
+        new_no = request.data.get('cheque_no')
+        
+        if not new_no:
+            return JsonResponse({"status": "error", "message": "No number provided"}, status=400)
+
+        # 3. DUPLICATE CHECK
+        # Search for any OTHER cheque belonging to this user with the same number
+        is_duplicate = cheque.objects.filter(
+            user=current_user, 
+            cheque_no=new_no
+        ).exclude(id=cheque_id).exists()
+
+        # 4. Update the instance
+        instance.cheque_no = new_no
+        instance.save()
+
+        # 5. Handle Duplicate Alert
+        if is_duplicate:
+            Alerts.objects.update_or_create(
+                user=current_user, 
+                cheque=instance,
+                defaults={
+                    'alerts': f"🚨 Duplicate Cheque No: {new_no} detected!",
+                    'payee': instance.payee,
+                    'cheque_date': instance.post_date or instance.issue_date or date.today()
+                }
+            )
+            msg = "Updated successfully. Duplicate alert generated."
+        else:
+            # If it's no longer a duplicate (user fixed it), remove the duplicate alert
+            Alerts.objects.filter(cheque=instance, alerts__icontains="Duplicate").delete()
+            msg = "Updated successfully."
+
+        return JsonResponse({"status": "success", "message": msg})
+        
+    except cheque.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Cheque not found"}, status=404)
+    except Exception as e:
+        logger.error(f"UPDATE NUMBER ERROR: {str(e)}")
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)
