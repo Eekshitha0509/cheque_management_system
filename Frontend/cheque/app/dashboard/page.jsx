@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect, useCallback } from "react";
 import axios from "axios";
 
-// Defined outside so all components can access it
 const todayDate = new Date().toLocaleDateString('en-GB').replaceAll('/', '-');
 
 export default function DashboardPage() {
@@ -75,7 +74,6 @@ export default function DashboardPage() {
     };
   }, [router, fetchChequeData, fetchAlerts]);
 
-  // Refresh data when tab switches
   useEffect(() => {
     if (authorised) {
       if (activeTab === "cheques") fetchChequeData();
@@ -168,9 +166,9 @@ export default function DashboardPage() {
   if (!authorised) return null;
 
   return (
-    <div className="bg-white min-h-screen text-slate-800 font-sans">
-      {/* FIXED HEADER & TABS CONTAINER */}
-      <div className="sticky top-0 z-[100] bg-white/95 backdrop-blur-sm border-b border-slate-100">
+    <div className="min-h-screen bg-white">
+      {/* --- FIXED HEADER SECTION --- */}
+      <div className="sticky top-0 z-30 bg-white border-b border-slate-100">
         <div className="max-w-6xl mx-auto px-6 pt-12">
           <div className="flex justify-between items-end mb-10">
             <div>
@@ -185,6 +183,7 @@ export default function DashboardPage() {
             </button>
           </div>
 
+          {/* TAB NAVIGATION */}
           <div className="flex gap-8">
             <button 
               onClick={() => {setActiveTab("cheques"); setShowUploadOptions(false)}} 
@@ -202,7 +201,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* SCROLLABLE MAIN CONTENT */}
+      {/* --- SCROLLABLE CONTENT AREA --- */}
       <div className="max-w-6xl mx-auto px-6 pt-10 pb-20">
         {showUploadOptions ? (
           <div className="max-w-md bg-slate-50 p-8 rounded-3xl border border-slate-100 mx-auto shadow-sm">
@@ -216,7 +215,7 @@ export default function DashboardPage() {
             {selectedFile && <button onClick={handleSubmitCheque} className="w-full bg-blue-600 text-white p-4 rounded-2xl font-bold transition-all active:scale-95">Submit Cheque</button>}
           </div>
         ) : (
-          <div>
+          <div className="relative">
             {activeTab === "cheques" && (
                 <Cheques 
                     list={chequeList} 
@@ -235,7 +234,7 @@ export default function DashboardPage() {
   );
 }
 
-// --- SUB-COMPONENTS ---
+// --- SUB-COMPONENTS (Keep these the same) ---
 
 function StatusToggle({ status, onToggle, disabled }) {
   const isCleared = status === "CLEARED";
@@ -261,13 +260,13 @@ function Cheques({ list, loading, updatingId, onToggle, onUpdateNumber }) {
     <div className="w-full overflow-x-auto rounded-2xl border border-slate-100 shadow-sm bg-white">
       <table className="w-full text-left border-collapse">
         <thead>
-          <tr className="text-[13px] uppercase tracking-[0.15em] text-slate-900 bg-slate-50/50">
-            <th className="p-5 font-bold border-b border-slate-500 min-w-[150px]">Date</th>
-            <th className="p-5 font-bold border-b border-slate-500">Cheque No</th>
-            <th className="p-5 font-bold border-b border-slate-500">Payee</th>
-            <th className="p-5 font-bold border-b border-slate-500 text-center">Status</th>
-            <th className="p-5 font-bold border-b border-slate-500 text-center">Action</th>
-            <th className="p-5 font-bold border-b border-slate-500 text-right">Reference</th>
+          <tr className="text-[13px] uppercase tracking-[0.15em] text-slate-900 bg-slate-50/50 sticky top-0 bg-slate-50 z-10">
+            <th className="p-5 font-bold border-b border-slate-200 min-w-[150px]">Date</th>
+            <th className="p-5 font-bold border-b border-slate-200">Cheque No</th>
+            <th className="p-5 font-bold border-b border-slate-200">Payee</th>
+            <th className="p-5 font-bold border-b border-slate-200 text-center">Status</th>
+            <th className="p-5 font-bold border-b border-slate-200 text-center">Action</th>
+            <th className="p-5 font-bold border-b border-slate-200 text-right">Reference</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
@@ -330,7 +329,7 @@ function Alerts({ list, loading }) {
     <div className="w-full overflow-x-auto rounded-2xl border border-slate-100 shadow-sm bg-white">
       <table className="w-full text-left border-collapse">
         <thead>
-          <tr className="text-[13px] uppercase tracking-[0.15em] text-slate-900 bg-slate-50/50">
+          <tr className="text-[13px] uppercase tracking-[0.15em] text-slate-900 bg-slate-50/50 sticky top-0 z-10">
             <th className="p-5 font-bold border-b border-slate-900">Session Date</th>
             <th className="p-5 font-bold border-b border-slate-900">Cheque Date</th>
             <th className="p-5 font-bold border-b border-slate-900">Payee Name</th>

@@ -5,6 +5,7 @@ import uuid
 from datetime import timedelta
 from django.utils import timezone
 
+
 class User(AbstractUser):
     mobilenumber = models.BigIntegerField(null = True,blank = True)
     bank_name = models.CharField(max_length=10, blank=True, null=True)
@@ -22,10 +23,12 @@ class Account(models.Model):
         return f"{self.user.username} - Balance: {self.balance}"
 
 class PasswordResetOTP(models.Model):
-    user = models.ForeignKey(User, on_on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     otp = models.CharField(max_length=6)
     reset_token = models.UUIDField(default=uuid.uuid4, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def is_valid(self):
         return self.created_at >= timezone.now() - timedelta(minutes=10)
+
+

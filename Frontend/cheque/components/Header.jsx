@@ -2,17 +2,17 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 export default function Header() {
   const pathname = usePathname();
+  const router = useRouter();
 
   const isDashboard = pathname.startsWith("/dashboard");
   const isProfile = pathname.startsWith("/profile");
 
-  // Common styles to ensure no "see-through" issues
-  const navStyles = "sticky top-0 z-[100] w-full flex items-center justify-between px-8 py-4 bg-white border-b border-slate-200 shadow-sm";
-
+const navStyles =
+  "sticky top-0 z-[100] w-full flex items-center justify-between px-8 py-4 bg-white border-b border-slate-200 shadow-sm";
   /* 🔹 DASHBOARD HEADER */
   if (isDashboard) {
     return (
@@ -34,8 +34,11 @@ export default function Header() {
 
           <button
             onClick={() => {
-              localStorage.removeItem("token");
-              window.location.href = "/";
+              // ✅ clear ALL auth data
+              localStorage.clear();
+
+              // ✅ use router (no reload issues)
+              router.push("/login");
             }}
             className="px-4 py-2 text-sm font-medium text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-all active:scale-95"
           >
@@ -46,6 +49,7 @@ export default function Header() {
     );
   }
 
+  /* 🔹 PROFILE HEADER */
   if (isProfile) {
     return (
       <nav className={navStyles}>
@@ -59,7 +63,7 @@ export default function Header() {
         <div className="flex items-center gap-4">
           <button
             onClick={() => {
-              window.location.href = "/dashboard";
+              router.push("/dashboard"); // ✅ fix navigation
             }}
             className="px-4 py-2 text-sm font-medium text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-all active:scale-95"
           >
@@ -70,7 +74,7 @@ export default function Header() {
     );
   }
 
-  /* 🔹 NORMAL HEADER (ALL OTHER PAGES) */
+  /* 🔹 NORMAL HEADER */
   return (
     <nav className={navStyles}>
       <div className="flex items-center gap-2">
