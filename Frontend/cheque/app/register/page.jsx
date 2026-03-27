@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import axios from "axios";
 import { useRouter } from "next/navigation";
+import API from "../../api"; // ✅ UPDATED
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -32,36 +32,32 @@ export default function RegisterPage() {
     e.preventDefault();
 
     try {
-      const response = await axios.post(
-        "http://127.0.0.1:8000/api/v1/user/",
-        {
-          username: formData.email,
-          email: formData.email,
-          password: formData.password,
-          mobile_number: formData.mobile_number,
-          bank_name: formData.bank_name.toUpperCase(),
-          role: "User",
-        }
-      );
+      const response = await API.post(`/api/v1/user/`, {
+        username: formData.email,
+        email: formData.email,
+        password: formData.password,
+        mobile_number: formData.mobile_number,
+        bank_name: formData.bank_name.toUpperCase(),
+        role: "User",
+      });
 
       if (response.status === 200 || response.status === 201) {
         router.push("/login");
       }
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        alert(
-          "Server Error:\n" +
-            JSON.stringify(error.response?.data, null, 2)
-        );
-      } else {
-        alert("An unexpected error occurred.");
-      }
+      console.error(error);
+      alert(
+        error.response?.data?.error ||
+        error.response?.data?.detail ||
+        "Registration failed"
+      );
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 text-black">
       <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+        
         <div className="mb-4">
           <Image
             src="/images.png"
@@ -100,7 +96,6 @@ export default function RegisterPage() {
             required
             onChange={handleChange}
             className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-            autoComplete="new-email"
           />
 
           <input
@@ -111,7 +106,6 @@ export default function RegisterPage() {
             required
             onChange={handleChange}
             className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-            autoComplete="new-password"
           />
 
           <input
@@ -122,18 +116,16 @@ export default function RegisterPage() {
             required
             onChange={handleChange}
             className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-            autoComplete="off"
           />
 
           <input
             type="text"
             name="bank_name"
-            placeholder="Bank Name (SBI, HDFC, ICICI, AXIS ,ICICI)"
+            placeholder="Bank Name (SBI, HDFC, ICICI, AXIS)"
             value={formData.bank_name}
             required
             onChange={handleChange}
             className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-            autoComplete="off"
           />
 
           <button

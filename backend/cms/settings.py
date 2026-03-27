@@ -30,7 +30,7 @@ SECRET_KEY = 'django-insecure-#e2h!hdkx3ubq@u)!hnw)pdoszv1n2j*hz=(%jjn)ji^@zjkt^
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'cheque.apps.ChequeConfig',
+    'notifications',
 ]
 
 MIDDLEWARE = [
@@ -98,6 +99,7 @@ ALLOWED_HOSTS = ['192.168.29.208', '127.0.0.1', 'localhost']
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://192.168.29.208:3000"
 ]
 
 AUTH_USER_MODEL = 'account.User'

@@ -17,7 +17,7 @@ const navStyles =
   if (isDashboard) {
     return (
       <nav className={navStyles}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 sm:gap-4 mt-2 sm:mt-0">
           <Image src="/images.png" alt="Q-cheque" width={40} height={40} />
           <span className="text-2xl font-bold text-blue-600">
             Q-cheque Dashboard
@@ -27,7 +27,7 @@ const navStyles =
         <div className="flex items-center gap-4">
           <Link
             href="/profile"
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shrink-0"
           >
             Profile
           </Link>

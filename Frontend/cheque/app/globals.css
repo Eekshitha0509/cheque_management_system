@@ -24,3 +24,9 @@ html, body {
   overscroll-behavior-y: none; /* Prevents the rubber-band effect that shows the back */
   height: 100%;
 }
+
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}

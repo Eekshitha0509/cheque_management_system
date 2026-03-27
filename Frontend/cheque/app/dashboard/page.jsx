@@ -28,11 +28,13 @@ export default function DashboardPage() {
     "Loan Repayment", "Tuition Fee", "Utility Bill", "Insurance Premium",
     "Donation", "Personal Transfer",
   ];
-
   // --- 2. DATABASE FETCH FUNCTIONS ---
   const fetchChequeData = useCallback(async () => {
     const username = localStorage.getItem("username");
-    if (!username) return;
+    if (!username) {
+    console.log("Username not found yet");
+    return;
+  }
     setLoading(true);
     try {
       const response = await axios.get(`http://127.0.0.1:8000/cheque/list/${encodeURIComponent(username)}/`);
@@ -66,9 +68,13 @@ export default function DashboardPage() {
       router.push("/login");
     } else {
       setAuthorised(true);
-      fetchChequeData();
-      fetchAlerts();
-    }
+
+      const username = localStorage.getItem("username");
+      if (username) {
+        fetchChequeData();
+        fetchAlerts();
+      }
+      }
     return () => {
       if (previewImage) URL.revokeObjectURL(previewImage);
     };
@@ -164,7 +170,7 @@ export default function DashboardPage() {
   };
 
   if (!authorised) return null;
-
+ 
   return (
     <div className="min-h-screen bg-white">
       {/* --- FIXED HEADER SECTION --- */}
@@ -177,7 +183,7 @@ export default function DashboardPage() {
             </div>
             <button
               onClick={() => setShowUploadOptions(true)}
-              className="bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-md active:scale-95 transition-all mb-1"
+              className="bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-md active:scale-95 transition-all mb-1 shrink-0"
             >
               + New Entry
             </button>
@@ -255,7 +261,6 @@ function StatusToggle({ status, onToggle, disabled }) {
 
 function Cheques({ list, loading, updatingId, onToggle, onUpdateNumber }) {
   if (loading && list.length === 0) return <div className="py-20 text-center animate-pulse text-slate-400 font-bold uppercase tracking-widest text-xs">Syncing Ledger...</div>;
-
   return (
     <div className="w-full overflow-x-auto rounded-2xl border border-slate-100 shadow-sm bg-white">
       <table className="w-full text-left border-collapse">

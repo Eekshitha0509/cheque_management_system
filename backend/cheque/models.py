@@ -31,6 +31,7 @@ class Alerts(models.Model):
     date = models.DateField(default=date.today)   
     payee = models.CharField(max_length=255)
     cheque_date = models.DateField()
+    alert_type = models.CharField(max_length=20, default="GENERAL")
     alerts = models.TextField()
 
     def __str__(self):

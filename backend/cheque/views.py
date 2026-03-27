@@ -5,7 +5,8 @@ import logging
 import re
 from datetime import date
 from dateutil import parser
-
+from PIL import Image
+import io
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import get_user_model
@@ -36,6 +37,24 @@ def get_actual_balance(user):
 
 # --- VIEW FUNCTIONS ---
 
+from PIL import Image
+import io
+
+def compress_image(image_file):
+    img = Image.open(image_file)
+    
+    # ✅ Resize (VERY IMPORTANT)
+    img = img.resize((800, 400))   # you can tweak (600x300 also works)
+
+    # ✅ Convert to RGB (important for JPEG)
+    img = img.convert("RGB")
+
+    # ✅ Compress
+    buffer = io.BytesIO()
+    img.save(buffer, format="JPEG", quality=40)  # 30–50 is good
+
+    return base64.b64encode(buffer.getvalue()).decode('utf-8')
+
 @csrf_exempt
 @csrf_exempt
 def cheque_reader(request):
@@ -51,8 +70,12 @@ def cheque_reader(request):
             return JsonResponse({"status": "error", "message": "Missing fields"}, status=400)
 
         current_user = User.objects.get(username=username)
+
+            # ✅ Read once
         image_data = image_file.read()
-        base64_image = base64.b64encode(image_data).decode('utf-8')
+
+            # ✅ Compress using same data
+        base64_image = compress_image(io.BytesIO(image_data))
 
         # --- REFINED AI PROMPT ---
         completion = client.chat.completions.create(
@@ -187,84 +210,74 @@ from rest_framework.decorators import api_view
 
 @api_view(['GET'])
 def list_alerts(request, username):
-    """Dynamic Notifications with Automatic Cleanup and Generation."""
     try:
         current_user = User.objects.get(username=username)
         today = date.today()
-        # Ensure this function returns a numeric value
         current_balance = get_actual_balance(current_user)
 
-        # 1. Cleanup: Auto-remove expired alerts (past the due date)
-        Alerts.objects.filter(user=current_user, cheque_date__lt=today).delete()
+        # 1. REMOVE ALL OLD ALERTS (fresh calculation every time)
+        Alerts.objects.filter(user=current_user).delete()
 
-        # 2. Fetch ALL relevant PENDING cheques for this user
-        # We fetch all pending cheques that are due today or in the future
-        relevant_cheques = cheque.objects.filter(
-            user=current_user, 
+        # 2. Get all pending cheques
+        cheques = cheque.objects.filter(
+            user=current_user,
             status='PENDING'
-        ).filter(
-            Q(post_date__gte=today) | Q(issue_date__gte=today)
         )
 
-        for c in relevant_cheques:
-            # Use whichever date is available for the calculation
+        for c in cheques:
             c_date = c.post_date or c.issue_date
             if not c_date:
                 continue
-                
+
             days_diff = (c_date - today).days
-            
-            # Logic: We only care about things happening in the next 3 days
-            if 0 <= days_diff <= 3:
-                # PRIORITY A: BOUNCE ALERTS (Balance is low)
-                if current_balance < c.amount:
-                    if days_diff == 0:
-                        msg = f"🚨 Due today: Balance (₹{current_balance}) is insufficient for ₹{c.amount}!"
-                    else:
-                        msg = f"⚠️ May bounce: Balance (₹{current_balance}) is lower than ₹{c.amount} due in {days_diff} days."
-                
-                # PRIORITY B: STANDARD REMINDERS (Balance is okay)
+
+            # Only future or today cheques
+            if days_diff < 0:
+                continue
+
+            # --- ALERT LOGIC ---
+
+            # 🔴 Low balance alert
+            if current_balance < c.amount:
+                if days_diff == 0:
+                    msg = f"🚨 Due today: Balance ₹{current_balance} < ₹{c.amount}"
                 else:
-                    if days_diff == 0:
-                        msg = "✅ Cheque Clearance today"
-                    else:
-                        msg = f"📅 Cheque Clearance in {days_diff} days"
+                    msg = f"⚠️ May bounce in {days_diff} days (₹{current_balance} < ₹{c.amount})"
 
-                # 3. Save or Update the Alert
-                # Note: We use the 'cheque' instance as the unique identifier
-                Alerts.objects.update_or_create(
-                    user=current_user, 
-                    cheque=c,
-                    defaults={
-                        'alerts': msg, 
-                        'payee': c.payee, 
-                        'cheque_date': c_date
-                    }
-                )
+            # 🟡 Normal alerts
+            else:
+                if days_diff == 0:
+                    msg = "✅ Cheque clearance today"
+                elif days_diff <= 3:
+                    msg = f"📅 Cheque clearance in {days_diff} days"
+                else:
+                    msg = f"🕒 Upcoming cheque in {days_diff} days"
 
-        # 4. Final Cleanup: If a cheque was cleared/deleted, remove its alert
-        # (This handles cases where the user marks a cheque as CLEARED in the history tab)
-        active_cheque_ids = relevant_cheques.values_list('id', flat=True)
-        Alerts.objects.filter(user=current_user).exclude(cheque_id__in=active_cheque_ids).delete()
+            # 3. Save alert
+            Alerts.objects.create(
+                user=current_user,
+                cheque=c,
+                payee=c.payee,
+                cheque_date=c_date,
+                alerts=msg
+            )
 
-        # 5. Return the list
-        alerts_list = Alerts.objects.filter(user=current_user).order_by('cheque_date')
-        data = [
-            {
-                "date": str(a.date), 
-                "cheque_date": str(a.cheque_date), 
-                "payee_name": a.payee, 
-                "alerts": a.alerts
-            } for a in alerts_list
-        ]
-        
+        # 4. Return alerts
+        alerts = Alerts.objects.filter(user=current_user).order_by('cheque_date')
+
+        data = [{
+            "date": str(a.date),
+            "cheque_date": str(a.cheque_date),
+            "payee_name": a.payee,
+            "alerts": a.alerts
+        } for a in alerts]
+
         return JsonResponse({"status": "success", "alerts": data})
 
     except User.DoesNotExist:
         return JsonResponse({"status": "error", "message": "User not found"}, status=404)
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
-
 
 @api_view(['POST'])
 def mark_as_cleared(request, cheque_id):
