@@ -10,10 +10,11 @@ export default function ProfilePage() {
   const fetchData = async () => {
     const user = localStorage.getItem("username");
     try {
-      const profileRes = await axios.get(`http://127.0.0.1:8000/account/profile/${user}/`);
+      const profileRes = await axios.get(`http://192.168.29.208:8000/account/profile/${user}/`);
       if (profileRes.data.status === "success") setProfile(profileRes.data.data);
+      console.log("PROFILE DATA:", profileRes.data);
 
-      const statsRes = await axios.get(`http://127.0.0.1:8000/cheque/list/${user}/`);
+      const statsRes = await axios.get(`http://192.168.29.208:8000/cheque/list/${user}/`);
       if (statsRes.data.status === "success") {
         const cheques = statsRes.data.cheques;
         setStats({
@@ -32,6 +33,10 @@ export default function ProfilePage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+  console.log("PROFILE STATE:", profile);
+}, [profile]);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-white">
@@ -73,8 +78,12 @@ export default function ProfilePage() {
           {/* COMPACT DETAILS CARD (Enhanced Icons) */}
           <div className="w-full lg:w-[350px] bg-white border border-slate-100 rounded-[2.5rem] p-10 shadow-sm flex flex-col justify-center space-y-8">
             <InfoBlock label="Profile Holder" value={profile?.username} icon="👤" />
-            <InfoBlock label="Associated Bank" value={profile?.bank_name || "HDFC Bank"} icon="🏦" />
-            <InfoBlock label="Contact Point" value={`+91 ${profile?.mobile || "---"}`} icon="📱" />
+            <InfoBlock label="Associated Bank" value={profile?.bank_name || "---"} icon="🏦" />
+            <InfoBlock label="Contact Point" value={
+            profile?.mobile
+              ? `+91 ${String(profile.mobile)}`
+              : "---"
+          } icon="📱" />
           </div>
         </div>
 

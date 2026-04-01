@@ -37,7 +37,7 @@ export default function DashboardPage() {
   }
     setLoading(true);
     try {
-      const response = await axios.get(`http://127.0.0.1:8000/cheque/list/${encodeURIComponent(username)}/`);
+      const response = await axios.get(`http://192.168.29.208:8000/cheque/list/${encodeURIComponent(username)}/`);
       if (response.data.status === "success") {
         setChequeList(response.data.cheques);
       }
@@ -52,7 +52,7 @@ export default function DashboardPage() {
     const username = localStorage.getItem("username");
     if (!username) return;
     try {
-      const response = await axios.get(`http://127.0.0.1:8000/cheque/alerts/${encodeURIComponent(username)}/`);
+      const response = await axios.get(`http://192.168.29.208:8000/cheque/alerts/${encodeURIComponent(username)}/`);
       if (response.data.status === "success") {
         setAlertList(response.data.alerts || []);
       }
@@ -78,19 +78,19 @@ export default function DashboardPage() {
     return () => {
       if (previewImage) URL.revokeObjectURL(previewImage);
     };
-  }, [router, fetchChequeData, fetchAlerts]);
+  }, [previewImage ,router, fetchChequeData, fetchAlerts]);
 
-  useEffect(() => {
-    if (authorised) {
-      if (activeTab === "cheques") fetchChequeData();
-      if (activeTab === "alerts") fetchAlerts();
-    }
-  }, [activeTab, authorised, fetchChequeData, fetchAlerts]);
+  // useEffect(() => {
+  //   if (authorised) {
+  //     if (activeTab === "cheques") fetchChequeData();
+  //     if (activeTab === "alerts") fetchAlerts();
+  //   }
+  // }, [ authorised, fetchChequeData, fetchAlerts]);
 
   // --- 4. ACTIONS ---
   const handleUpdateChequeNumber = async (id, newNumber) => {
     try {
-      const response = await axios.post(`http://127.0.0.1:8000/cheque/update_number/${id}/`, {
+      const response = await axios.post(`http://192.168.29.208:8000/cheque/update_number/${id}/`, {
         cheque_no: newNumber
       });
       if (response.data.status === "success") {
@@ -112,7 +112,7 @@ export default function DashboardPage() {
 
     setUpdatingId(chequeId); 
     try {
-      const response = await axios.post(`http://127.0.0.1:8000/cheque/clear/${chequeId}/`, {
+      const response = await axios.post(`http://192.168.29.208:8000/cheque/clear/${chequeId}/`, {
         status: newStatus,
         username: localStorage.getItem("username")
       });
@@ -147,7 +147,7 @@ export default function DashboardPage() {
 
     setLoading(true);
     try {
-      const response = await axios.post("http://127.0.0.1:8000/cheque/cheque_reader/", formData);
+      const response = await axios.post("http://192.168.29.208:8000/cheque/cheque_reader/", formData);
       if (response.data.status === "success") {
         resetUploadState();
         fetchChequeData();
@@ -176,30 +176,52 @@ export default function DashboardPage() {
       {/* --- FIXED HEADER SECTION --- */}
       <div className="sticky top-0 z-30 bg-white border-b border-slate-100">
         <div className="max-w-6xl mx-auto px-6 pt-12">
-          <div className="flex justify-between items-end mb-10">
-            <div>
-              <h1 className="text-4xl font-bold tracking-tight text-slate-900">My Ledger</h1>
-              <p className="text-slate-500 mt-2">Manage your digital cheques and status updates.</p>
-            </div>
-            <button
-              onClick={() => setShowUploadOptions(true)}
-              className="bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-md active:scale-95 transition-all mb-1 shrink-0"
-            >
-              + New Entry
-            </button>
-          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+  
+  {/* LEFT SIDE */}
+  <div>
+    <h1 className="text-xl sm:text-3xl md:text-4xl font-bold tracking-tight text-slate-900">
+      My Ledger
+    </h1>
+    <p className="text-sm sm:text-base text-slate-500 mt-1 sm:mt-2">
+      Manage your digital cheques and status updates.
+    </p>
+  </div>
+
+  {/* RIGHT SIDE BUTTON */}
+  <button
+    onClick={() => setShowUploadOptions(true)}
+    className="
+      ml-auto sm:ml-0
+      bg-blue-600 text-white 
+      w-10 h-10 sm:w-auto sm:h-auto 
+      flex items-center justify-center 
+      rounded-full 
+      font-bold shadow-md active:scale-95 transition-all
+    "
+  >
+    {/* Mobile */}
+    <span className="block sm:hidden text-lg">+</span>
+
+    {/* Desktop */}
+    <span className="hidden sm:block px-8 py-3">
+      + New Entry
+    </span>
+  </button>
+
+</div>
 
           {/* TAB NAVIGATION */}
           <div className="flex gap-8">
             <button 
               onClick={() => {setActiveTab("cheques"); setShowUploadOptions(false)}} 
-              className={`pb-4 text-sm font-bold transition-all border-b-2 ${activeTab === "cheques" && !showUploadOptions ? "text-blue-600 border-blue-600" : "text-slate-400 border-transparent"}`}
+              className={`pt-8 pb-4 text-sm font-bold transition-all border-b-2 ${activeTab === "cheques" && !showUploadOptions ? "text-blue-600 border-blue-600" : "text-slate-400 border-transparent"}`}
             >
               History
             </button>
             <button 
               onClick={() => {setActiveTab("alerts"); setShowUploadOptions(false)}} 
-              className={`pb-4 text-sm font-bold transition-all border-b-2 ${activeTab === "alerts" ? "text-blue-600 border-blue-600" : "text-slate-400 border-transparent"}`}
+              className={`pt-8 pb-4 text-sm font-bold transition-all border-b-2 ${activeTab === "alerts" ? "text-blue-600 border-blue-600" : "text-slate-400 border-transparent"}`}
             >
               Notifications ({alertList.length})
             </button>
@@ -295,13 +317,35 @@ function Cheques({ list, loading, updatingId, onToggle, onUpdateNumber }) {
                   {item.status}
                 </span>
               </td>
-              <td className="p-5 text-center">
-                <StatusToggle status={item.status} onToggle={() => onToggle(item.id, item.status)} disabled={updatingId === item.id} />
-              </td>
+<td className="p-5 text-center">
+  <button 
+    onClick={() => onToggle(item.id, item.status)}
+    disabled={updatingId === item.id}
+    className={`
+      w-[70px] px-4 py-2 rounded-lg font-semibold text-white justify-center items-center
+      ${item.status === "CLEARED" 
+        ? "bg-green-500 hover:bg-green-600 pl-2 " 
+        : "bg-red-500 hover:bg-red-600"}
+      ${updatingId === item.id ? "opacity-50 cursor-not-allowed" : ""}
+      
+      shadow-sm hover:shadow-md
+      transform transition-all duration-200 ease-in-out
+      active:scale-[0.98]
+    `}
+  >
+    {updatingId === item.id ? (
+      <span className="inline-block animate-pulse">...</span>
+    ) : item.status === "CLEARED" ? (
+      "Reopen"
+    ) : (
+      "Clear"
+    )}
+  </button>
+</td>
               <td className="p-5 text-right">
                 {item.image && (
-                  <a href={`http://127.0.0.1:8000${item.image}`} target="_blank" rel="noopener noreferrer">
-                    <img src={`http://127.0.0.1:8000${item.image}`} className="w-10 h-7 object-cover rounded border border-slate-200 inline-block" alt="thumb" />
+                  <a href={`http://192.168.29.208:8000${item.image}`} target="_blank" rel="noopener noreferrer">
+                    <img src={`http://192.168.29.208:8000${item.image}`} className="w-10 h-7 object-cover rounded border border-slate-200 inline-block" alt="thumb" />
                   </a>
                 )}
               </td>

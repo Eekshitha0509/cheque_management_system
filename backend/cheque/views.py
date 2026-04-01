@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 # Initialize Groq - Update with your actual API key
-client = Groq(api_key="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")
+client = Groq(api_key=os.getenv("API_KEY"))
 
 # --- HELPER FUNCTIONS ---
 
