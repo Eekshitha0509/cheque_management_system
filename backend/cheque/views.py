@@ -7,6 +7,9 @@ from datetime import date
 from dateutil import parser
 from PIL import Image
 import io
+import cloudinary
+import cloudinary.uploader
+from django.core.files.base import ContentFile
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import get_user_model
@@ -14,7 +17,7 @@ from django.core.files.base import ContentFile
 from django.db.models import Q
 from rest_framework.decorators import api_view
 from groq import Groq
-
+from django.core.files.storage import default_storage
 # Import your specific models
 from .models import cheque, Alerts
 from account.models import Account 
@@ -23,7 +26,7 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 # Initialize Groq - Update with your actual API key
-client = Groq(api_key=os.getenv("API_KEY"))
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 # --- HELPER FUNCTIONS ---
 
@@ -70,30 +73,29 @@ def cheque_reader(request):
             return JsonResponse({"status": "error", "message": "Missing fields"}, status=400)
 
         current_user = User.objects.get(username=username)
-
-            # ✅ Read once
         image_data = image_file.read()
-
-            # ✅ Compress using same data
+        
+        # Compress for AI processing
         base64_image = compress_image(io.BytesIO(image_data))
 
-        # --- REFINED AI PROMPT ---
+        # --- CLOUDINARY MANUAL UPLOAD ---
+        # This bypasses the 'AttributeError' by uploading before creating the DB record
+        cloudinary_url = None
+        if image_file:
+            upload_result = cloudinary.uploader.upload(
+                ContentFile(image_data),
+                folder="cheques/",
+                public_id=f"{username}_{date.today()}_{re.sub(r'[^a-zA-Z0-0]', '', purpose[:10])}"
+            )
+            cloudinary_url = upload_result.get('secure_url')
+
+        # --- AI EXTRACTION ---
         completion = client.chat.completions.create(
             model="meta-llama/llama-4-scout-17b-16e-instruct",
             messages=[{
                 "role": "user",
                 "content": [
-                    {
-                        "type": "text", 
-                        "text": (
-                            "Carefully extract these fields from the cheque image: "
-                            "1. 'pay_name': The person or company being paid. "
-                            "2. 'amount': The numerical value. "
-                            "3. 'date': The date written on the cheque. "
-                            "4. 'chequenumber': Look ONLY at the bottom MICR line. It is the FIRST 6-digit number in quotes or brackets (e.g., '000123'). "
-                            "Return ONLY valid JSON."
-                        )
-                    },
+                    {"type": "text", "text": "Extract 'pay_name', 'amount', 'date', and 6-digit 'chequenumber' from the MICR line. Return ONLY JSON."},
                     {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
                 ]
             }],
@@ -103,82 +105,67 @@ def cheque_reader(request):
 
         extracted = json.loads(completion.choices[0].message.content)
         
-        # --- ROBUST EXTRACTION LOGIC ---
-        
-        # 1. Clean Cheque Number: Ensure we only get 6 digits
+        # Clean extracted data
         raw_cheque_no = str(extracted.get('chequenumber', '0'))
-        # Use regex to find the first 6-digit sequence if AI included extra text
         match = re.search(r'(\d{6})', raw_cheque_no)
         cheque_no = int(match.group(1)) if match else 0
         
-        # 2. Clean Amount
         raw_amount = str(extracted.get('amount', '0'))
         clean_amount = float(re.sub(r"[^\d.]", "", raw_amount) or 0.0)
-
-        # 3. Payee
         payee = extracted.get('pay_name', 'Unknown')
 
-        # 4. Date Logic
         raw_date = extracted.get('date')
-        cheque_date = None
+        cheque_date = date.today()
         if raw_date and raw_date != "0":
             try:
                 cheque_date = parser.parse(str(raw_date), dayfirst=True).date()
-            except: 
-                cheque_date = date.today()
+            except: pass
 
         today = date.today()
         issue_date = cheque_date if cheque_date <= today else None
         post_date = cheque_date if cheque_date > today else None
 
-        is_duplicate = False
-        if cheque_no != 0:
-            is_duplicate = cheque.objects.filter(
-                user=current_user, 
-                cheque_no=cheque_no
-            ).exists()
+        is_duplicate = cheque.objects.filter(user=current_user, cheque_no=cheque_no).exists() if cheque_no != 0 else False
 
-        # --- SAVE & ALERTS ---
+        # --- SAVE TO SUPABASE ---
         new_record = cheque.objects.create(
             user=current_user,
-            cheque_no=cheque_no, # Now cleaner
+            cheque_no=cheque_no,
             payee=payee,
             amount=clean_amount,
             issue_date=issue_date,
             post_date=post_date,
             description=f"Payment of ₹{clean_amount} to {payee} for {purpose}",
-            Image=ContentFile(image_data, name=f"{payee}_{today}.jpg"),
+            Image=cloudinary_url, # Storing the direct URL string
             status='PENDING'
         )
 
+        # --- ALERTS ---
         if is_duplicate:
             Alerts.objects.create(
                 user=current_user,
                 cheque=new_record,
                 payee=payee,
-                cheque_date=cheque_date or today,
-                alerts=f"🚫 DUPLICATE DETECTED: Cheque #{cheque_no} already exists in your ledger."
+                cheque_date=cheque_date,
+                alerts=f"🚫 DUPLICATE DETECTED: Cheque #{cheque_no} already exists."
             )
 
-        # Alert Logic (Your Structured Design)
         current_balance = get_actual_balance(current_user)
         if cheque_date >= today and current_balance < clean_amount:
-            days_diff = (cheque_date - today).days
-            if days_diff <= 3:
-                Alerts.objects.create(
-                    user=current_user,
-                    cheque=new_record,
-                    payee=payee,
-                    cheque_date=cheque_date,
-                    alerts=f"⚠️ Low Balance Alert for Cheque #{cheque_no}"
-                )
+            Alerts.objects.create(
+                user=current_user,
+                cheque=new_record,
+                payee=payee,
+                cheque_date=cheque_date,
+                alerts=f"⚠️ Low Balance Alert for Cheque #{cheque_no}"
+            )
 
-        return JsonResponse({"status": "success", "message": "Cheque saved."})
+        return JsonResponse({"status": "success", "message": "Cheque saved and uploaded to Cloudinary."})
 
     except Exception as e:
-        import traceback
-        logger.error(traceback.format_exc()) # This prints the FULL error to your terminal
+        logger.error(f"UPLOAD ERROR: {str(e)}")
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
+    
 
 @api_view(['GET'])
 def list_of(request, username):
@@ -195,7 +182,7 @@ def list_of(request, username):
             "description": c.description,
             "status": c.status,
             "date": str(c.issue_date or c.post_date or "N/A"),
-            "image": c.Image.url if c.Image else None
+            "image": str(c.Image) if c.Image else None
         } for c in user_cheques]
 
         return JsonResponse({"status": "success", "cheques": data})

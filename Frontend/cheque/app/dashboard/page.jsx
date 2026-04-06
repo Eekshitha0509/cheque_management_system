@@ -344,8 +344,20 @@ function Cheques({ list, loading, updatingId, onToggle, onUpdateNumber }) {
 </td>
               <td className="p-5 text-right">
                 {item.image && (
-                  <a href={`http://192.168.29.208:8000${item.image}`} target="_blank" rel="noopener noreferrer">
-                    <img src={`http://192.168.29.208:8000${item.image}`} className="w-10 h-7 object-cover rounded border border-slate-200 inline-block" alt="thumb" />
+                  <a 
+                    href={item.image?.startsWith("http") 
+                      ? item.image 
+                      : `http://192.168.29.208:8000/media/${item.image}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                  >
+                    <img 
+                      src={item.image?.startsWith("http") 
+                        ? item.image 
+                        : `http://192.168.29.208:8000/media/${item.image}`} 
+                      className="w-10 h-7 object-cover rounded border border-slate-200 inline-block" 
+                      alt="thumb" 
+                    />
                   </a>
                 )}
               </td>

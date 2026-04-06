@@ -2,7 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from datetime import date
-
+from cloudinary.models import CloudinaryField
 User = get_user_model()
 
 class cheque(models.Model):
@@ -13,7 +13,7 @@ class cheque(models.Model):
     issue_date = models.DateField(null=True, blank=True)
     post_date = models.DateField(null=True, blank=True)
     description = models.TextField()
-    Image = models.ImageField(upload_to="cheques/", null=True, blank=True)
+    Image = models.CharField(max_length=500, blank=True, null=True)
     status = models.CharField(
     max_length=20,
     choices=[

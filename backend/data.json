@@ -1,0 +1,618 @@
+[
+
+{
+
+  "model": "sessions.session",
+
+  "pk": "46lzq6jdon1ln3r3ru4mcqvxaqubtxd2",
+
+  "fields": {
+
+    "session_data": ".eJxVjMEOwiAQRP-FsyHQhQIevfcbyMIutmpoUtqT8d9tkx70Npn3Zt4i4raOcWu8xInEVWglLr9lwvzkehB6YL3PMs91XaYkD0WetMlhJn7dTvfvYMQ27mvDoDrLgTJlZo1WQUi25JR60C7sWWlHngmhK2AQlPeleOg7a1zwRny-F-433w:1vvWZb:B7Inv6jMrw7rbblgOfz7WDmXZVobVq9xg_Y8z2F4KHw",
+
+    "expire_date": "2026-03-12T08:18:15.578Z"
+
+  }
+
+},
+
+{
+
+  "model": "sessions.session",
+
+  "pk": "bdr6us4etgdrv46fba23ubjvvpkgbwvv",
+
+  "fields": {
+
+    "session_data": ".eJxVjEEOwiAQRe_C2hAYUMGl-56hGZgZqRpISrsy3l2bdKHb_977LzXiupRx7TyPE6mLsurwuyXMD64boDvWW9O51WWekt4UvdOuh0b8vO7u30HBXr41xCMbZpAzgMd4EgvReUHvRBxnLyaJkAOLMUeOJoAVT-JsSMQSrHp_AOtrOGw:1vsEEx:-KCZqjuNOe0gId9iPJb_sAQSoXx_OY7g6JUUbXAOUbU",
+
+    "expire_date": "2026-03-03T06:07:19.713Z"
+
+  }
+
+},
+
+{
+
+  "model": "account.user",
+
+  "pk": 1,
+
+  "fields": {
+
+    "password": "pbkdf2_sha256$1200000$KVYLtuDmYWDknyWwtVDEc7$xSb4sNwBT863m7lOtKhTTwjUzTy0wk38j8KfvrkE1iY=",
+
+    "last_login": null,
+
+    "is_superuser": false,
+
+    "username": "eekshithanamala3@gmail.com",
+
+    "first_name": "",
+
+    "last_name": "",
+
+    "email": "eekshithanamala3@gmail.com",
+
+    "is_staff": false,
+
+    "is_active": true,
+
+    "date_joined": "2026-03-17T05:37:17.571Z",
+
+    "mobilenumber": 9876543210,
+
+    "bank_name": "HDFC",
+
+    "is_verified": false,
+
+    "groups": [],
+
+    "user_permissions": []
+
+  }
+
+},
+
+{
+
+  "model": "account.account",
+
+  "pk": 1,
+
+  "fields": {
+
+    "user": 1,
+
+    "balance": "500000.00"
+
+  }
+
+},
+
+{
+
+  "model": "cheque.cheque",
+
+  "pk": 1,
+
+  "fields": {
+
+    "user": 1,
+
+    "cheque_no": 789001,
+
+    "payee": "Alia Bhatt",
+
+    "amount": 10000.0,
+
+    "issue_date": "2026-03-17",
+
+    "post_date": null,
+
+    "description": "Payment of 뿯ν뿯½╣10000.0 to Alia Bhatt for Salary Payment",
+
+    "Image": "cheques/Alia_Bhatt_2026-03-20_PbCR6rb.jpg",
+
+    "status": "CLEARED"
+
+  }
+
+},
+
+{
+
+  "model": "cheque.cheque",
+
+  "pk": 2,
+
+  "fields": {
+
+    "user": 1,
+
+    "cheque_no": 789002,
+
+    "payee": "Ranbir Kapoor",
+
+    "amount": 100000.0,
+
+    "issue_date": "2026-03-18",
+
+    "post_date": null,
+
+    "description": "Payment of 뿯ν뿯½╣100000.0 to Ranbir Kapoor for Rent Payment",
+
+    "Image": "cheques/Ranbir_Kapoor_2026-03-20_kF6Xbcj.jpg",
+
+    "status": "CLEARED"
+
+  }
+
+},
+
+{
+
+  "model": "cheque.cheque",
+
+  "pk": 3,
+
+  "fields": {
+
+    "user": 1,
+
+    "cheque_no": 789004,
+
+    "payee": "Vijay Menon",
+
+    "amount": 30000.0,
+
+    "issue_date": null,
+
+    "post_date": "2026-03-24",
+
+    "description": "Payment of 뿯ν뿯½╣30000.0 to Vijay Menon for Loan Repayment",
+
+    "Image": "cheques/Vijay_Menon_2026-03-20_aj6gI1q.jpg",
+
+    "status": "CLEARED"
+
+  }
+
+},
+
+{
+
+  "model": "cheque.cheque",
+
+  "pk": 4,
+
+  "fields": {
+
+    "user": 1,
+
+    "cheque_no": 789005,
+
+    "payee": "Preethi Vardhan",
+
+    "amount": 20000.0,
+
+    "issue_date": "2026-03-20",
+
+    "post_date": null,
+
+    "description": "Payment of 뿯ν뿯½╣20000.0 to Preethi Vardhan for Tuition Fee",
+
+    "Image": "cheques/Preethi_Vardhan_2026-03-20_pB1ds78.jpg",
+
+    "status": "CLEARED"
+
+  }
+
+},
+
+{
+
+  "model": "cheque.cheque",
+
+  "pk": 16,
+
+  "fields": {
+
+    "user": 1,
+
+    "cheque_no": 789003,
+
+    "payee": "Vicky Kaushal",
+
+    "amount": 50000.0,
+
+    "issue_date": null,
+
+    "post_date": "2026-03-21",
+
+    "description": "Payment of 뿯ν뿯½╣50000.0 to Vicky Kaushal for Invoice Payment",
+
+    "Image": "cheques/Vicky_Kaushal_2026-03-20_lTD7U0H.jpg",
+
+    "status": "CLEARED"
+
+  }
+
+},
+
+{
+
+  "model": "cheque.cheque",
+
+  "pk": 26,
+
+  "fields": {
+
+    "user": 1,
+
+    "cheque_no": 789006,
+
+    "payee": "Aditi Sharma",
+
+    "amount": 50000.0,
+
+    "issue_date": null,
+
+    "post_date": "2026-03-25",
+
+    "description": "Payment of 뿯ν뿯½╣50000.0 to Aditi Sharma for Insurance Premium",
+
+    "Image": "cheques/Aditi_Sharma_2026-03-23.jpg",
+
+    "status": "CLEARED"
+
+  }
+
+},
+
+{
+
+  "model": "cheque.cheque",
+
+  "pk": 27,
+
+  "fields": {
+
+    "user": 1,
+
+    "cheque_no": 789007,
+
+    "payee": "Naina Talwar",
+
+    "amount": 10000.0,
+
+    "issue_date": null,
+
+    "post_date": "2026-03-24",
+
+    "description": "Payment of 뿯ν뿯½╣10000.0 to Naina Talwar for Tuition Fee",
+
+    "Image": "cheques/Naina_Talwar_2026-03-23.jpg",
+
+    "status": "CLEARED"
+
+  }
+
+},
+
+{
+
+  "model": "cheque.cheque",
+
+  "pk": 28,
+
+  "fields": {
+
+    "user": 1,
+
+    "cheque_no": 789008,
+
+    "payee": "Ranvijay Singh",
+
+    "amount": 1000000.0,
+
+    "issue_date": null,
+
+    "post_date": "2026-03-27",
+
+    "description": "Payment of 뿯ν뿯½╣1000000.0 to Ranvijay Singh for Loan Repayment",
+
+    "Image": "cheques/Ranvijay_Singh_2026-03-23.jpg",
+
+    "status": "CLEARED"
+
+  }
+
+},
+
+{
+
+  "model": "cheque.cheque",
+
+  "pk": 29,
+
+  "fields": {
+
+    "user": 1,
+
+    "cheque_no": 789009,
+
+    "payee": "Nitin Arora",
+
+    "amount": 800000.0,
+
+    "issue_date": null,
+
+    "post_date": "2026-08-27",
+
+    "description": "Payment of 뿯ν뿯½╣800000.0 to Nitin Arora for Personal Transfer",
+
+    "Image": "cheques/Nitin_Arora_2026-03-23.jpg",
+
+    "status": "CLEARED"
+
+  }
+
+},
+
+{
+
+  "model": "cheque.cheque",
+
+  "pk": 30,
+
+  "fields": {
+
+    "user": 1,
+
+    "cheque_no": 789010,
+
+    "payee": "Harry Potter",
+
+    "amount": 300000.0,
+
+    "issue_date": null,
+
+    "post_date": "2026-03-30",
+
+    "description": "Payment of 뿯ν뿯½╣300000.0 to Harry Potter for Loan Repayment",
+
+    "Image": "cheques/Harry_Potter_2026-03-27.jpg",
+
+    "status": "CLEARED"
+
+  }
+
+},
+
+{
+
+  "model": "cheque.cheque",
+
+  "pk": 31,
+
+  "fields": {
+
+    "user": 1,
+
+    "cheque_no": 789011,
+
+    "payee": "Hermione Granger",
+
+    "amount": 30000.0,
+
+    "issue_date": null,
+
+    "post_date": "2026-04-01",
+
+    "description": "Payment of 뿯ν뿯½╣30000.0 to Hermione Granger for Personal Transfer",
+
+    "Image": "cheques/Hermione_Granger_2026-03-27.jpg",
+
+    "status": "PENDING"
+
+  }
+
+},
+
+{
+
+  "model": "cheque.cheque",
+
+  "pk": 32,
+
+  "fields": {
+
+    "user": 1,
+
+    "cheque_no": 789012,
+
+    "payee": "Malfoy",
+
+    "amount": 10000.0,
+
+    "issue_date": null,
+
+    "post_date": "2026-04-01",
+
+    "description": "Payment of 뿯ν뿯½╣10000.0 to Malfoy for Tuition Fee",
+
+    "Image": "cheques/Malfoy_2026-03-27.jpg",
+
+    "status": "PENDING"
+
+  }
+
+},
+
+{
+
+  "model": "cheque.cheque",
+
+  "pk": 33,
+
+  "fields": {
+
+    "user": 1,
+
+    "cheque_no": 789013,
+
+    "payee": "Dumbledore",
+
+    "amount": 90000.0,
+
+    "issue_date": null,
+
+    "post_date": "2026-04-03",
+
+    "description": "Payment of 뿯ν뿯½╣90000.0 to Dumbledore for Utility Bill",
+
+    "Image": "cheques/Dumbledore_2026-03-27.jpg",
+
+    "status": "PENDING"
+
+  }
+
+},
+
+{
+
+  "model": "cheque.cheque",
+
+  "pk": 34,
+
+  "fields": {
+
+    "user": 1,
+
+    "cheque_no": 789014,
+
+    "payee": "Ron",
+
+    "amount": 50000.0,
+
+    "issue_date": null,
+
+    "post_date": "2026-04-03",
+
+    "description": "Payment of 뿯ν뿯½╣50000.0 to Ron for Invoice Payment",
+
+    "Image": "cheques/Ron_2026-03-31.jpg",
+
+    "status": "PENDING"
+
+  }
+
+},
+
+{
+
+  "model": "cheque.alerts",
+
+  "pk": 1285,
+
+  "fields": {
+
+    "user": 1,
+
+    "cheque": 34,
+
+    "date": "2026-04-01",
+
+    "payee": "Ron",
+
+    "cheque_date": "2026-04-03",
+
+    "alert_type": "GENERAL",
+
+    "alerts": "≡뿯ƽ뿯½뿯½ Cheque clearance in 2 days"
+
+  }
+
+},
+
+{
+
+  "model": "cheque.alerts",
+
+  "pk": 1286,
+
+  "fields": {
+
+    "user": 1,
+
+    "cheque": 31,
+
+    "date": "2026-04-01",
+
+    "payee": "Hermione Granger",
+
+    "cheque_date": "2026-04-01",
+
+    "alert_type": "GENERAL",
+
+    "alerts": "뿯ν뿯½뿯½ Cheque clearance today"
+
+  }
+
+},
+
+{
+
+  "model": "cheque.alerts",
+
+  "pk": 1287,
+
+  "fields": {
+
+    "user": 1,
+
+    "cheque": 32,
+
+    "date": "2026-04-01",
+
+    "payee": "Malfoy",
+
+    "cheque_date": "2026-04-01",
+
+    "alert_type": "GENERAL",
+
+    "alerts": "뿯ν뿯½뿯½ Cheque clearance today"
+
+  }
+
+},
+
+{
+
+  "model": "cheque.alerts",
+
+  "pk": 1288,
+
+  "fields": {
+
+    "user": 1,
+
+    "cheque": 33,
+
+    "date": "2026-04-01",
+
+    "payee": "Dumbledore",
+
+    "cheque_date": "2026-04-03",
+
+    "alert_type": "GENERAL",
+
+    "alerts": "≡뿯ƽ뿯½뿯½ Cheque clearance in 2 days"
+
+  }
+
+}
+
+]
+

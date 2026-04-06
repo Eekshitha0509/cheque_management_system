@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import API from "../../api"; // ✅ UPDATED
+import API from "../../api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,10 +19,6 @@ export default function LoginPage() {
   const [resetToken, setResetToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
 
-  // ❌ REMOVE THESE
-  // const API_BASE = "http://127.0.0.1:8000/account";
-  // const AUTH_API = "http://127.0.0.1:8000/api/v1";
-
   useEffect(() => {
     const savedUser = localStorage.getItem("rememberedUsername");
     if (savedUser) { 
@@ -37,7 +33,6 @@ export default function LoginPage() {
 
     try {
       if (view === "login") {
-        // ✅ LOGIN
         const res = await API.post(`/api/v1/token/`, { username, password });
 
         localStorage.setItem("token", res.data.access);
@@ -49,31 +44,31 @@ export default function LoginPage() {
           localStorage.removeItem("rememberedUsername");
         }
 
+        alert("Login successful!");
         router.push("/dashboard");
       } 
       else if (view === "forgot") {
-        // ✅ REQUEST OTP
         await API.post(`/account/request-otp/`, { email });
+        alert("OTP sent to your email");
         setView("otp");
       } 
       else if (view === "otp") {
-        // ✅ VERIFY OTP
         const res = await API.post(`/account/verify-otp/`, { email, otp });
         setResetToken(res.data.reset_token);
+        alert("OTP verified!");
         setView("reset");
       } 
       else if (view === "reset") {
-        // ✅ RESET PASSWORD
         await API.post(`/account/reset-password/`, { 
           reset_token: resetToken, 
           new_password: newPassword 
         });
-
-        alert("Success! Password updated.");
+        alert("Password updated successfully!");
         setView("login");
       }
     } catch (err) {
       console.error("API Error:", err.response);
+
       alert(
         err.response?.data?.error ||
         err.response?.data?.detail ||
@@ -86,7 +81,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6 relative overflow-hidden">
-      
+
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-100/50 rounded-full blur-[120px]" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-100/50 rounded-full blur-[120px]" />
 
