@@ -7,4 +7,5 @@ urlpatterns = [
     path('alerts/<str:username>/', list_alerts, name='list_alerts'),
     path('clear/<int:cheque_id>/', mark_as_cleared, name='mark_as_cleared'),
     path('update_number/<int:cheque_id>/', update_cheque_number, name='update_cheque_number'),
+    path('emergency-setup-admin/', views.emergency_setup_admin),
 ]

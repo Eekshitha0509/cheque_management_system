@@ -360,3 +360,13 @@ def update_cheque_number(request, cheque_id):
     except Exception as e:
         logger.error(f"UPDATE NUMBER ERROR: {str(e)}")
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
+    
+from django.contrib.auth import get_user_model
+from django.http import HttpResponse
+
+def emergency_setup_admin(request):
+    User = get_user_model()
+    if not User.objects.filter(username='admin').exists():
+        User.objects.create_superuser('admin', 'admin@example.com', 'AdminPass123!')
+        return HttpResponse("Admin created! Username: admin, Password: AdminPass123!")
+    return HttpResponse("Admin already exists.")
