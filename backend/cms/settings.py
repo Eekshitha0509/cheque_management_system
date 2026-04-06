@@ -12,7 +12,7 @@ SECRET_KEY = config('SECRET_KEY')
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.29.208', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['cheque-management-system.onrender.com','192.168.29.208', '127.0.0.1', 'localhost']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
