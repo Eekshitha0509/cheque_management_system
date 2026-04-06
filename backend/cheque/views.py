@@ -22,6 +22,7 @@ from django.core.files.storage import default_storage
 from .models import cheque, Alerts
 from account.models import Account 
 
+
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
@@ -367,6 +368,6 @@ from django.http import HttpResponse
 def create_admin(request):
     User = get_user_model()
     if not User.objects.filter(username='admin').exists():
-        User.objects.create_superuser('admin', 'admin@example.com', 'AdminPass123!')
+        User.objects.create_superuser('admin', 'admin@example.com', 'Admin123!')
         return HttpResponse("Success! User 'admin' created.")
     return HttpResponse("User 'admin' already exists.")
