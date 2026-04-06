@@ -1,14 +1,12 @@
 from datetime import timedelta
 from pathlib import Path
 import os
-from dotenv import load_dotenv
 from decouple import config
 import dj_database_url
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-load_dotenv()
 
 SECRET_KEY = config('SECRET_KEY')
 
