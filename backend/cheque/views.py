@@ -25,9 +25,18 @@ from account.models import Account
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
-# Initialize Groq - Update with your actual API key
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+from decouple import config
+import os
 
+# Use decouple's config() - it's the gold standard for Django deployment
+# It looks at .env locally AND Render Environment Variables automatically
+GRO_KEY = config("GROQ_API_KEY", default=os.environ.get("GROQ_API_KEY"))
+
+if GRO_KEY:
+    client = Groq(api_key=GRO_KEY)
+else:
+    client = None
+    print("Warning: GROQ_API_KEY not found. AI features will be disabled.")
 # --- HELPER FUNCTIONS ---
 
 def get_actual_balance(user):
