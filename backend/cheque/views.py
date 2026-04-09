@@ -3,26 +3,26 @@ import json
 import os
 import logging
 import re
-from datetime import date
-from dateutil import parser
-from PIL import Image
 import io
+
 from datetime import date, datetime
-import cloudinary
-import cloudinary.uploader
-from django.core.files.base import ContentFile
+from dateutil import parser
+
+from PIL import Image
+
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
-from django.db.models import Q
-from rest_framework.decorators import api_view
-from groq import Groq
 from django.core.files.storage import default_storage
-# Import your specific models
-from .models import cheque, Alerts
-from account.models import Account 
+from django.db.models import Q
 
+from rest_framework.decorators import api_view
+
+from groq import Groq
+
+from .models import cheque, Alerts
+from account.models import Account
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -57,14 +57,14 @@ def compress_image(image_file):
     img = Image.open(image_file)
     
     
-    img = img.resize((800, 400))   # you can tweak (600x300 also works)
+    img = img.resize((800, 400))   
 
    
     img = img.convert("RGB")
 
     
     buffer = io.BytesIO()
-    img.save(buffer, format="JPEG", quality=40)  # 30–50 is good
+    img.save(buffer, format="JPEG", quality=40)  
 
     return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
@@ -121,7 +121,7 @@ def cheque_reader(request):
 
         extracted = json.loads(completion.choices[0].message.content)
 
-        # --- DATA CLEANING ---
+        #DATA CLEANING 
         payee = extracted.get('pay_name', 'Unknown')
         
         # Clean Amount
@@ -167,10 +167,10 @@ def cheque_reader(request):
             issue_date = today
             post_date = None
 
-        # --- DUPLICATE CHECK (Using String Comparison) ---
+        # DUPLICATE CHECK (Using String Comparison) 
         is_duplicate = cheque.objects.filter(user=current_user, cheque_no=cheque_no).exists()
 
-        # --- SAVE RECORD ---
+        #  SAVE RECORD 
         new_record = cheque.objects.create(
             user=current_user,
             cheque_no=cheque_no,  # Now saving as string '000001'
