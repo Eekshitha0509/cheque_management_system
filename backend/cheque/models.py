@@ -7,13 +7,13 @@ User = get_user_model()
 
 class cheque(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    cheque_no = models.IntegerField(unique=True)
+    cheque_no = models.CharField(unique=True)
     payee = models.TextField()
     amount = models.FloatField()
     issue_date = models.DateField(null=True, blank=True)
     post_date = models.DateField(null=True, blank=True)
     description = models.TextField()
-    Image = models.CharField(max_length=500, blank=True, null=True)
+    Image = models.ImageField(upload_to='cheques/', blank=True, null=True)
     status = models.CharField(
     max_length=20,
     choices=[

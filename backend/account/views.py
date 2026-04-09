@@ -83,7 +83,7 @@ class VerifyOTP(APIView):
 
         if record and record.is_valid():
             return Response({
-                "reset_token": str(record.reset_token)  # 🔥 important
+                "reset_token": str(record.reset_token) 
             }, status=status.HTTP_200_OK)
 
         return Response({"error": "Invalid or expired OTP"}, status=status.HTTP_400_BAD_REQUEST)
@@ -103,7 +103,7 @@ class ResetPassword(APIView):
             user.set_password(new_password)
             user.save()
 
-            record.delete()  # cleanup
+            record.delete() 
 
             return Response({"message": "Password updated successfully"})
 

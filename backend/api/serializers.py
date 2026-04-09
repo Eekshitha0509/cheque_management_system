@@ -4,9 +4,8 @@ from cheque.models import cheque
 from django.utils import timezone
 from account.models import User
 
-# ==========================================
 # CHEQUE SERIALIZER
-# ==========================================
+
 class chequeSerializer(serializers.ModelSerializer):
     class Meta:
         model = cheque 
@@ -59,10 +58,8 @@ class chequeSerializer(serializers.ModelSerializer):
         
         return data
 
-
-# ==========================================
 # USER SERIALIZER
-# ==========================================
+
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
 

@@ -12,7 +12,7 @@ SECRET_KEY = config('SECRET_KEY')
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['cheque-management-system.onrender.com','192.168.29.208', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['cheque-management-system.onrender.com','192.168.29.208', '127.0.0.1', 'localhost','192.168.0.8','0.0.0.0','192.168.0.13','*']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -27,8 +27,9 @@ INSTALLED_APPS = [
     'corsheaders',
     'cheque.apps.ChequeConfig',
     'notifications',
-    'cloudinary',
-    'cloudinary_storage',
+    # --- COMMENTED OUT CLOUDINARY APPS ---
+    # 'cloudinary',
+    # 'cloudinary_storage',
 ]
 
 MIDDLEWARE = [
@@ -61,17 +62,32 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'cms.wsgi.application'
-
+"""
 DATABASES = {
     'default': dj_database_url.parse(
         config('DATABASE_URL')
     )
 }
+"""
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'cheque_db',
+        'USER' : 'postgres',
+        'PASSWORD' : 'root123',
+        'HOST' : 'localhost',
+        'PORT' : '5432',
+    }
+}
+
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "http://192.168.29.208:3000"
+    "http://192.168.29.208:3000",
+    "http://192.168.0.8:3000",
+    "http://192.168.0.13:3000"
 ]
 
 AUTH_USER_MODEL = 'account.User'
@@ -102,23 +118,26 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# --- LOCAL MEDIA STORAGE ---
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': config('CLOUD_NAME'),
-    'API_KEY': config('CLOUDINARY_API_KEY'),
-    'API_SECRET': config('CLOUDINARY_API_SECRET'),
-}
+# --- COMMENTED OUT CLOUDINARY CONFIGURATION ---
 
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+# CLOUDINARY_STORAGE = {
+#     'CLOUD_NAME': config('CLOUD_NAME'),
+#     'API_KEY': config('CLOUDINARY_API_KEY'),
+#     'API_SECRET': config('CLOUDINARY_API_SECRET'),
+# }
 
-import cloudinary
-cloudinary.config(
-    cloud_name=config('CLOUD_NAME'),
-    api_key=config('CLOUDINARY_API_KEY'),
-    api_secret=config('CLOUDINARY_API_SECRET')
-)
+# DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+# import cloudinary
+# cloudinary.config(
+#     cloud_name=config('CLOUD_NAME'),
+#     api_key=config('CLOUDINARY_API_KEY'),
+#     api_secret=config('CLOUDINARY_API_SECRET')
+# )
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
