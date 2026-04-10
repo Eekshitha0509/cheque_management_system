@@ -112,7 +112,7 @@ export default function LoginPage() {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Username"
+                placeholder="Email"
                 className="w-full px-4 py-3 rounded-xl border"
                 required
               />

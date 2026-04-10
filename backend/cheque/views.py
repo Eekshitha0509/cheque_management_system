@@ -67,9 +67,7 @@ def compress_image(image_file):
     img.save(buffer, format="JPEG", quality=40)  
 
     return base64.b64encode(buffer.getvalue()).decode('utf-8')
-
-
-@csrf_exempt
+from django.views.decorators.csrf import csrf_exempt
 @csrf_exempt
 def cheque_reader(request):
     if request.method != 'POST':
@@ -102,10 +100,10 @@ def cheque_reader(request):
                             "Rules:\n"
                             "1. 'pay_name': Extract handwritten name after 'Pay' check properly for the letters because they are handwritten.\n"
                             "2. 'amount': Numeric value in the box.\n"
-                            "3. 'date': 8 digits from top-right boxes (DDMMYYYY).\n , check for the year properly beacuse they might belong to the current year that is 2026"
-                            "4. 'micr_line': This refers to the white MICR band at the bottom. "
-                            "The Cheque Number is strictly the FIRST 6 digits found between the '⑈' symbols "
-                            "on the extreme left. You MUST include leading zeros (e.g., '000001'). "
+                            "3. 'date': 8 digits from top-right boxes (DDMMYYYY).\n , check for the year properly beacuse they might belong to the current year that is 2026\n"
+                            "4. 'micr_line': This refers to the white MICR band at the bottom which is E-13B format. "
+                            "The Cheque Number is strictly the FIRST 6 digits found between the '⑆' symbols "
+                            "on the extreme left. You MUST include leading zeros also if they are there in the bottom left of the image. "
                             "DO NOT return the 9-digit MICR code that follows it."
                         )
                     },
@@ -121,24 +119,36 @@ def cheque_reader(request):
 
         extracted = json.loads(completion.choices[0].message.content)
 
-        #DATA CLEANING 
+        # DATA CLEANING 
         payee = extracted.get('pay_name', 'Unknown')
         
         # Clean Amount
         raw_amount = str(extracted.get('amount', '0'))
         clean_amount = float(re.sub(r"[^\d.]", "", raw_amount) or 0.0)
 
-        # --- UPDATED: STRICT 6-DIGIT STRING EXTRACTION ---
+        # --- UPDATED: STRICT 6-DIGIT EXTRACTION WITH E-13B ERROR MAPPING ---
         raw_micr = str(extracted.get('micr_line', ''))
-        # This regex finds the first block of digits in the string
+        
+        # 1. Fix common E-13B vision hallucinations BEFORE extracting digits
+        error_map = {
+            'S': '5', 's': '5', 
+            'B': '8', 
+            'O': '0', 'o': '0', 
+            'l': '1', 'I': '1', 
+            'Z': '2', 'z': '2'
+        }
+        for wrong_char, right_char in error_map.items():
+            raw_micr = raw_micr.replace(wrong_char, right_char)
+
+        # 2. Find the first block of digits in the corrected string
         micr_match = re.search(r'(\d+)', raw_micr)
         
         if micr_match:
-            # Take only the first 6 digits and keep as a string
+            # Take exactly the first 6 digits and ensure it's 6 characters long
             cheque_no = micr_match.group(1)[:6].zfill(6)
-        else:
-            # Fallback if OCR fails, using a unique string to avoid duplicate errors
-            cheque_no = f"ERR{datetime.now().strftime('%M%S')}"
+        #else:
+            # Fallback if OCR fails completely
+            #cheque_no = f"ERR{datetime.now().strftime('%M%S')}"
 
         # --- DATE LOGIC ---
         raw_date = extracted.get('date')
@@ -170,10 +180,16 @@ def cheque_reader(request):
         # DUPLICATE CHECK (Using String Comparison) 
         is_duplicate = cheque.objects.filter(user=current_user, cheque_no=cheque_no).exists()
 
-        #  SAVE RECORD 
+        if is_duplicate:
+            return JsonResponse({
+                "status": "error",
+                "message": f"Cheque number {cheque_no} already exists for this user"
+            }, status=400)
+
+        # SAVE RECORD 
         new_record = cheque.objects.create(
             user=current_user,
-            cheque_no=cheque_no,  # Now saving as string '000001'
+            cheque_no=cheque_no,  
             payee=payee,
             amount=clean_amount,
             issue_date=issue_date,
@@ -182,16 +198,6 @@ def cheque_reader(request):
             Image=image_file,
             status='PENDING'
         )
-
-        # --- ALERTS ---
-        if is_duplicate:
-            Alerts.objects.create(
-                user=current_user,
-                cheque=new_record,
-                payee=payee,
-                cheque_date=extracted_date or today,
-                alerts=f"🚫 DUPLICATE DETECTED: Cheque #{cheque_no} already exists."
-            )
 
         current_balance = get_actual_balance(current_user)
         if current_balance < clean_amount:
@@ -235,12 +241,6 @@ def list_of(request, username):
         return JsonResponse({"status": "success", "cheques": data})
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
-
-
-from django.db.models import Q
-from datetime import date
-from django.http import JsonResponse
-from rest_framework.decorators import api_view
 
 @api_view(['GET'])
 def list_alerts(request, username):
@@ -398,9 +398,7 @@ def update_cheque_number(request, cheque_id):
     except Exception as e:
         logger.error(f"UPDATE NUMBER ERROR: {str(e)}")
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
-    
-from django.contrib.auth import get_user_model
-from django.http import HttpResponse
+
 
 def create_admin(request):
     User = get_user_model()

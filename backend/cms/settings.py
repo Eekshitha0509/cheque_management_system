@@ -87,7 +87,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://192.168.29.208:3000",
     "http://192.168.0.8:3000",
-    "http://192.168.0.13:3000"
+    "http://192.168.0.13:3000",
 ]
 
 AUTH_USER_MODEL = 'account.User'
@@ -146,3 +146,7 @@ EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
 EMAIL_HOST_USER = config('EMAIL_USER') 
 EMAIL_HOST_PASSWORD = config('EMAIL_PASSWORD')
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+]
