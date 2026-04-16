@@ -58,12 +58,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/login");
-    } else {
+    if (token) {
       setAuthorised(true);
       fetchChequeData();
       fetchAlerts();
+    } else {
+      router.push("/login");
     }
     return () => { if (previewImage) URL.revokeObjectURL(previewImage); };
   }, [router, fetchChequeData, fetchAlerts, previewImage]);
