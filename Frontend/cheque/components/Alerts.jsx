@@ -1,6 +1,8 @@
 // components/Alerts.jsx
 
 // Use "export default" so page.jsx can find it easily
+import PropTypes from 'prop-types';
+
 export default function Alerts({ list, loading }) {
   if (loading) return <div className="py-20 text-center animate-pulse text-xs font-bold text-slate-400">LOADING ALERTS...</div>;
   if (!list || list.length === 0) return <div className="py-20 text-center text-slate-400 font-medium">No active alerts.</div>;
@@ -15,9 +17,8 @@ export default function Alerts({ list, loading }) {
             <th className="p-5 font-bold border-b border-slate-900">Alert Status</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-50">
-          {list.map((item, index) => (
-            <tr key={index} className={item.alerts.toLowerCase().includes("duplicate") ? "bg-red-50/50" : ""}>
+          {list.map((item) => (
+            <tr key={item.cheque_date + '-' + item.payee_name + '-' + item.alerts} className={item.alerts.toLowerCase().includes("duplicate") ? "bg-red-50/50" : ""}>
               <td className="p-5 text-sm text-slate-500">{item.cheque_date || "N/A"}</td>
               <td className="p-5 font-bold text-slate-800">{item.payee_name || "Unknown"}</td>
               <td className="p-5">
@@ -27,8 +28,12 @@ export default function Alerts({ list, loading }) {
               </td>
             </tr>
           ))}
-        </tbody>
       </table>
     </div>
   );
 }
+
+Alerts.propTypes = {
+  list: PropTypes.array,
+  loading: PropTypes.bool,
+};

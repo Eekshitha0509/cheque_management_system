@@ -6,6 +6,7 @@ import API from "../../api";
 import Cheques from "@/components/Cheques";
 import Alerts from "@/components/Alerts";
 import ProcessingOverlay from "@/components/ProcessingOverlay";
+import Image from "next/image";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -62,13 +63,13 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/login");
-    } else {
-      setAuthorised(true);
-      fetchChequeData();
-      fetchAlerts();
-    }
+    if (token) {
+  setAuthorised(true);
+  fetchChequeData();
+  fetchAlerts();
+} else {
+  router.push("/login");
+}
 
     return () => {
       if (previewImage) URL.revokeObjectURL(previewImage);
@@ -194,15 +195,21 @@ export default function DashboardPage() {
             <select value={purpose} onChange={(e) => setPurpose(e.target.value)}
               className="w-full px-5 py-4 rounded-2xl bg-white border mb-4">
               <option value="" disabled>-- Select Purpose --</option>
-              {chequePurposes.map((p, i) => <option key={i}>{p}</option>)}
+              {chequePurposes.map((p) => (
+  <option key={p}>{p}</option>
+))}
             </select>
 
             <button onClick={() => inputRef.current.click()}
               className="w-full mb-4 bg-slate-900 text-white p-4 rounded-2xl font-bold">
               Capture Image
             </button>
-
-            {previewImage && <img src={previewImage} className="w-full rounded-xl mb-4 border" alt="preview" />}
+(
+              <div className="relative w-full h-64 mb-4">
+                <Image src={previewImage} fill className="rounded-xl border object-cover" alt="preview" />
+              </div>
+            )
+            {previewImage && <Image src={previewImage} width={400} height={256} unoptimized className="w-full rounded-xl mb-4 border" alt="preview" />}
 
             {selectedFile && (
               <button onClick={handleSubmitCheque}

@@ -1,6 +1,7 @@
 import "./globals.css";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import PropTypes from "prop-types";  
 
 export const metadata = {
   title: "Q-cheque | Digital Ledger",
@@ -22,3 +23,8 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
+
+// ✅ ADD THIS BLOCK
+RootLayout.propTypes = {
+  children: PropTypes.node.isRequired,
+};
