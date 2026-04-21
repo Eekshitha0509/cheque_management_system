@@ -68,7 +68,7 @@ class User_View(APIView):
     def post(self, request):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()  # is_verified = False automatically
+            serializer.save()  
             return Response(
                 {"message": "Registration successful. Waiting for verification."},
                 status=status.HTTP_201_CREATED
