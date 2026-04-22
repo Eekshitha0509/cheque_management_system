@@ -38,7 +38,7 @@ else:
     client = None
     print("Warning: GROQ_API_KEY not found. AI features will be disabled.")
 
-
+@csrf_exempt
 def get_actual_balance(user):
     """Fetches real balance from the Account table."""
     try:
@@ -47,7 +47,7 @@ def get_actual_balance(user):
     except Account.DoesNotExist:
         return 0.0
 
-
+@csrf_exempt
 def compress_image(image_file):
     """Compresses and encodes an image to base64."""
     img = Image.open(image_file)
@@ -57,7 +57,7 @@ def compress_image(image_file):
     img.save(buffer, format="JPEG", quality=40)
     return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
-
+@csrf_exempt
 def validate_cheque_input(request) -> dict:
     """Validates input for cheque_reader and returns cleaned data."""
     if request.method != 'POST':
@@ -75,7 +75,7 @@ def validate_cheque_input(request) -> dict:
         'image_data': image_file.read()
     }
 
-
+@csrf_exempt
 def prepare_image_for_ai(image_data) -> str:
     """Prepares image data for AI processing."""
     return compress_image(io.BytesIO(image_data))
@@ -138,8 +138,9 @@ def clean_micr(raw_micr: str) -> str:
     # Fallback if OCR fails
     return f"ERR{datetime.now().strftime('%M%S')}"
 
+from typing import Optional
 
-def parse_date(raw_date) -> date:
+def parse_date(raw_date) -> Optional[date]:
     """Parses the date from extracted data."""
     if not raw_date or str(raw_date).strip() in ["null", "None", ""]:
         return None
@@ -168,7 +169,7 @@ def check_duplicate_cheque(user, cheque_no: str) -> bool:
     """Checks if cheque number is duplicate."""
     return cheque.objects.filter(user=user, cheque_no=cheque_no).exists()
 
-
+@csrf_exempt
 def save_cheque_record(user, cleaned_data: dict, image_file) -> cheque:
     """Saves the cheque record to DB."""
     return cheque.objects.create(
@@ -183,7 +184,7 @@ def save_cheque_record(user, cleaned_data: dict, image_file) -> cheque:
         status='PENDING'
     )
 
-
+@csrf_exempt
 def handle_balance_alert(user, cheque_record, payee: str, extracted_date, amount: float):
     """Creates alert if balance is low."""
     current_balance = get_actual_balance(user)

@@ -42,6 +42,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware'
 ]
 
 ROOT_URLCONF = 'cms.urls'
@@ -62,32 +63,25 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'cms.wsgi.application'
-"""
-DATABASES = {
-    'default': dj_database_url.parse(
-        config('DATABASE_URL')
-    )
-}
-"""
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'cheque_db',
-        'USER' : 'postgres',
-        'PASSWORD' : 'root123',
-        'HOST' : 'localhost',
-        'PORT' : '5432',
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
 
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://192.168.29.208:3000",
-    "http://192.168.0.8:3000",
-    "http://192.168.0.13:3000",
+    "https://localhost:3000",
+    "https://127.0.0.1:3000",
+    "https://192.168.29.208:3000",
+    "https://192.168.0.8:3000",
+    "https://192.168.0.13:3000",
 ]
 
 AUTH_USER_MODEL = 'account.User'
